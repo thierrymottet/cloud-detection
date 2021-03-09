@@ -124,7 +124,8 @@ def choixModeleML(image):
     options = ["1. Model VGG16 Simple",
     "2. Model VGG19 Simple",
     "3. Model VGG19 Multiple"]
-    choixutilisateur = st.selectbox(label = "Model selection", options = options)
+    st.subheader("Model selection")
+    choixutilisateur = st.selectbox(label = "", options = options)
     ########################################################################################
     if(choixutilisateur==options[0]):
         Modele_TransfertLearning_VGG16Simple(image)
@@ -384,16 +385,16 @@ def bar1():
 
 def main():
 
-    st.title("Cloud detection")
-    st.text('Build with Streamlit,VGG19 and OpenCV')
-    st.info("Detectable form possible : Fish, Flower, Sugar, Gravel")
-
     menu = ['Cloud Detection','About']
     choice = st.sidebar.selectbox('Menu',menu)
 
     if choice == 'Cloud Detection':
-        st.subheader('')
-        st.text('Original Image')
+
+        st.title("Cloud detection")
+        st.text('Build with Streamlit,VGG19 and OpenCV')
+        st.info("Detectable form possible : Fish, Flower, Sugar, Gravel")
+
+        st.subheader('Original Image')
         our_image=retournerImage()
 
         enhance_type = st.sidebar.radio('Enhance Type', ['Original', 'Gray-Scale', 'Contrast', 'Brightness', 'Blurring'])
@@ -405,7 +406,7 @@ def main():
             our_image=Image.fromarray(gray)
             #Reconversion en RGB (image toujours en Gris quand même) -> permet fonctionnement algo. deep
             our_image = our_image.convert("RGB")
-            st.text('Modified Image')
+            st.subheader('Modified Image')
             st.image(our_image, width = width)
 
         if enhance_type == 'Contrast':
@@ -413,7 +414,7 @@ def main():
             enhancer = ImageEnhance.Contrast(our_image)
             img_output = enhancer.enhance(c_rate)
             our_image=img_output
-            st.text('Modified Image')
+            st.subheader('Modified Image')
             st.image(our_image, width = width)
 
         if enhance_type == 'Brightness':
@@ -421,7 +422,7 @@ def main():
             enhancer = ImageEnhance.Brightness(our_image)
             img_output = enhancer.enhance(c_rate)
             our_image=img_output
-            st.text('Modified Image')
+            st.subheader('Modified Image')
             st.image(our_image, width = width)
 
         if enhance_type == 'Blurring':
@@ -430,7 +431,7 @@ def main():
             img = cv2.cvtColor(new_img, 1)
             blur_img = cv2.GaussianBlur(img, (11, 11), blur_rate)
             our_image=Image.fromarray(blur_img)
-            st.text('Modified Image')
+            st.subheader('Modified Image')
             st.image(our_image, width = width)
         else:
             pass
