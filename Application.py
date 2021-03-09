@@ -4,6 +4,7 @@ Created on Sat Mar  6 16:02:38 2021
 
 @author: pc
 """
+
 #Importation des packages nécessaires
 from datetime import timedelta
 from pathlib import Path
@@ -51,6 +52,9 @@ cheminImagesTest = "./testimages/"
 img_size = 600
 width = 600
 
+#Enregistrement en mémoire des fonction déjà chargées
+@st.cache(suppress_st_warning=True)
+
 #Fonction utiles à l'application
 # %%
 @st.cache
@@ -85,6 +89,7 @@ def loadmodel(chemin, fichier):
     st.write("Loaded model from disk")
     # evaluate loaded model on test data
     opt = Adam(lr=0.001)
+    #A vérifier sur le compile si nécessaire
     loaded_model.compile(optimizer = opt , loss = 'sparse_categorical_crossentropy' , metrics = ['accuracy'])
     model = loaded_model
     return model
@@ -101,6 +106,8 @@ def retournerImage():
         temp_file.write(buffer.getvalue())
         st.image(load_img(temp_file.name), width = width)
         var = load_img(temp_file.name)
+    else:
+        var=""
     return var
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -379,47 +386,50 @@ def main():
         st.subheader('Original Image')
         our_image=retournerImage()
 
-        enhance_type = st.sidebar.radio('Enhance Type', ['Original', 'Gray-Scale', 'Contrast', 'Brightness', 'Blurring'])
-
-        if enhance_type == 'Gray-Scale':
-            new_img = np.array(our_image.convert('RGB'))
-            img = cv2.cvtColor(new_img, 1)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            our_image=Image.fromarray(gray)
-            #Reconversion en RGB (image toujours en Gris quand même) -> permet fonctionnement algo. deep
-            our_image = our_image.convert("RGB")
-            st.subheader('Modified Image')
-            st.image(our_image, width = width)
-
-        if enhance_type == 'Contrast':
-            c_rate = st.sidebar.slider('Contrast', 0.5, 3.5)
-            enhancer = ImageEnhance.Contrast(our_image)
-            img_output = enhancer.enhance(c_rate)
-            our_image=img_output
-            st.subheader('Modified Image')
-            st.image(our_image, width = width)
-
-        if enhance_type == 'Brightness':
-            c_rate = st.sidebar.slider('Brightness', 0.5, 3.5)
-            enhancer = ImageEnhance.Brightness(our_image)
-            img_output = enhancer.enhance(c_rate)
-            our_image=img_output
-            st.subheader('Modified Image')
-            st.image(our_image, width = width)
-
-        if enhance_type == 'Blurring':
-            new_img = np.array(our_image.convert('RGB'))
-            blur_rate = st.sidebar.slider('Blurring', 0.5, 3.5)
-            img = cv2.cvtColor(new_img, 1)
-            blur_img = cv2.GaussianBlur(img, (11, 11), blur_rate)
-            our_image=Image.fromarray(blur_img)
-            st.subheader('Modified Image')
-            st.image(our_image, width = width)
+        if(our_image == ""):
+            st.write("NOT IMAGE")
         else:
-            pass
+            enhance_type = st.sidebar.radio('Enhance Type', ['Original', 'Gray-Scale', 'Contrast', 'Brightness', 'Blurring'])
 
-        #On lance une prédiction sur l'image modifiée        
-        choixModeleML(our_image)
+            if enhance_type == 'Gray-Scale':
+                new_img = np.array(our_image.convert('RGB'))
+                img = cv2.cvtColor(new_img, 1)
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                our_image=Image.fromarray(gray)
+                #Reconversion en RGB (image toujours en Gris quand même) -> permet fonctionnement algo. deep
+                our_image = our_image.convert("RGB")
+                st.subheader('Modified Image')
+                st.image(our_image, width = width)
+
+            if enhance_type == 'Contrast':
+                c_rate = st.sidebar.slider('Contrast', 0.5, 3.5)
+                enhancer = ImageEnhance.Contrast(our_image)
+                img_output = enhancer.enhance(c_rate)
+                our_image=img_output
+                st.subheader('Modified Image')
+                st.image(our_image, width = width)
+
+            if enhance_type == 'Brightness':
+                c_rate = st.sidebar.slider('Brightness', 0.5, 3.5)
+                enhancer = ImageEnhance.Brightness(our_image)
+                img_output = enhancer.enhance(c_rate)
+                our_image=img_output
+                st.subheader('Modified Image')
+                st.image(our_image, width = width)
+
+            if enhance_type == 'Blurring':
+                new_img = np.array(our_image.convert('RGB'))
+                blur_rate = st.sidebar.slider('Blurring', 0.5, 3.5)
+                img = cv2.cvtColor(new_img, 1)
+                blur_img = cv2.GaussianBlur(img, (11, 11), blur_rate)
+                our_image=Image.fromarray(blur_img)
+                st.subheader('Modified Image')
+                st.image(our_image, width = width)
+            else:
+                pass
+
+            #On lance une prédiction sur l'image modifiée        
+            choixModeleML(our_image)
 
 
     elif choice == 'About':
