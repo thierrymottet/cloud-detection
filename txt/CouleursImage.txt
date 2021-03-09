@@ -1,0 +1,6 @@
+Un autre axe d'étude concernant les images est leur couleur. En effet, nous savons que chaque pixel est caractérisé par son code couleur, c'est-à-dire 3 entiers correspondant aux niveaux de bleu, de vert, et de rouge. A première vue, les images, bien que colorées, sont assez proches du noir et blanc. Il est légitime de se demander si l'information codée sur 3 entiers ne pourrait pas se résumer à un seul.
+
+Pour cela, nous allons:
+
+calculer la moyenne et l'écart type de chacun des 3 niveaux de couleur sur chacune des images
+afficher ces informations sous forme de nuage de points 3D pourt l'ensemble des images.

@@ -1,0 +1,5 @@
+On peut aller plus loin en regardant la composition des images monoformes et multiformes. Pour ces dernières nous avons les combinaisons suivantes:
+
+à deux formes: Fish/Flower, Fish/Gravel, Fish/Sugar, Flower/Gravel, Flower/Sugar, Gravel/Sugar
+à trois formes: Fish/Flower/Gravel, Fish/Flower/Sugar, Fish/Gravel/Sugar , Flower/Gravel/Sugar
+ou les 4 formes

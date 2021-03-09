@@ -1,0 +1,15 @@
+Ce premier affichage nous donne déjà quelques informations.
+
+chacun des fichiers csv est associé à l'un des ensembles d'images (train ou test)
+comme indiqué dans l'énoncé Kaggle, il y a 4 formes de nuages (Fish, Gravel, Flower, Sugar) et les fichiers csv contiennent chacun 4 lignes (une par forme de nuage) pour chaque image du dataset correspondant
+ainsi, le dataset d'entrainement "train_images" contient 5546 images, et donc le fichier csv associé, nommé train.csv, contient 4 * 5546 = 22184 lignes
+de même pour le dataset de test "test_images" avec 3698 images pour 4 * 3698 = 14792 lignes dans le fichier sample_submission.csv associé
+Penchons nous maintenant sur les colonnes des fichiers csv: il n'y en a que 2, nommées Image_Label, et EncodedPixels: regardons la colonne Image_Label:
+
+la colonne Image_label contient un nom qui est la concaténation du nom de l'image (par exemple '0011165.jpg')du caractère '_' et du nom d'une des 4 formes: 'Fish', 'Flower', 'Gravel' ou 'Sugar'.
+Ainsi, pour l'image '0011165.jpg' nous avons 4 lignes dont les valeurs de Image_Label associées sont '0011165.jpg_Fish', '0011165.jpg_Flower', '0011165.jpg_Sugar', et '0011165.jpg_Gravel'. La valeur prise par cette colonne caractérise donc le couple (image, forme).
+De son côté, la colonne EncodedPixels du fichier "train.csv" peut contenir 2 choses:
+
+soit le couple (Image, Forme) est "valide", dans le sens où la forme considérée est bien présente sur l'image considérée. Dans ce cas, EncodedPixels contient la liste des pixels où l'image se trouve. Cet ensemble de pixels peut couvrir une ou plusieurs zones, tous les pixels forment une seule ligne.
+soirt le couple (Image, Forme) est non valide, ce qui signifie que la forme considérée n'est pas présente, et dans ce cas, la valeur EncodedPixels est un NaN.
+Concernant le fichier "sample_submission.csv", la colonne EncodedPixels ne contient que la valeur '1 1' et l'objectif de ce projet sera d'entraîner un modèle qui permettra justement de prédire la valeur de cette colonne (ie présence de formes et localisation sur l'image).

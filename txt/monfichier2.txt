@@ -1,0 +1,5 @@
+Pour mener à bien ce projet, un ensemble de données et fichiers nous a été fourni. Il est composé de:
+
+9244 images jpeg (réparties entre 5546 images d'entrainement et 3698 images de test)
+2 fichiers csv intitulés respectivement "train.csv" et "sample_submission.csv".
+Nous allons dans un premier temps analyser le contenu de ces fichiers csv.
