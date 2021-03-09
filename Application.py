@@ -48,12 +48,7 @@ cheminVGG19Multiple = cheminModeles+"VGG19Multiple/"
 cheminImagesTest = "./testimages/"
 
 # Constants
-image_width = 600
-image_height = 600
 img_size = 600
-batch_size = 64
-IMG_SHAPE = 600
-batch_size = 32
 width = 600
 
 #Fonction utiles à l'application
@@ -181,20 +176,7 @@ def FirstAnalysis_PremierVisualisation():
     st.title("I. Première visualisation\n")
 
     st.subheader("1) Visualisation d'une image\n")
-    #img=retournerImage()
-    img=image
-
-    img_color= cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # nous initialisons un vecteur pour chaque couleur
-    col1 = []
-    col2 = []
-    col3 = []
-    # récupération des 3 niveaux de couleur
-    col1.append(img[:,:,0])
-    col2.append(img[:,:,1])
-    col3.append(img[:,:,2])
-
-    st.write(col1)
+    img=retournerImage()
 
 #Fonction renvoyant sur la categorie "Segmentation des données/Etude des statistiques"
 def FirstAnalysis_EtudeStatistique():
