@@ -37,6 +37,8 @@ from keras.preprocessing import image
 from keras.preprocessing.image import load_img
 from tempfile import NamedTemporaryFile
 from PIL import Image,ImageEnhance
+import matplotlib.pyplot as plt
+import re
 
 #Constantes
 cheminImages = "./img/"
@@ -46,7 +48,11 @@ cheminModeles = "./models/"
 cheminVGG16Simple = cheminModeles+"VGG16Simple/c/"
 cheminVGG19Simple = cheminModeles+"VGG19Simple/c/"
 cheminVGG19Multiple = cheminModeles+"VGG19Multiple/"
+cheminRegression = cheminModeles+"Regression/"
 cheminImagesTest = "./testimages/"
+resumeVGG19Simple = "ResumeModeleVGG19Simple.txt"
+resumeVGG19Multi = "ResumeModeleVGG19Multi.txt"
+resumeRegression = "ResumeModeleRegression.txt"
 
 # Constants
 img_size = 600
@@ -86,11 +92,9 @@ def loadmodel(chemin, fichier):
     loaded_model = model_from_json(loaded_model_json)
     # load weights into new model
     loaded_model.load_weights(chemin+fichier+'.h5')
-    st.write("Loaded model from disk")
+    st.write("Chargement du modèle")
     # evaluate loaded model on test data
     opt = Adam(lr=0.001)
-    #A vérifier sur le compile si nécessaire
-    loaded_model.compile(optimizer = opt , loss = 'sparse_categorical_crossentropy' , metrics = ['accuracy'])
     model = loaded_model
     return model
 
@@ -98,116 +102,89 @@ def loadmodel(chemin, fichier):
 def retournerImage():
     st.set_option('deprecation.showfileUploaderEncoding', False)
 
-    st.info("It is necessary to load an image in memory in order to be able to make a prediction")
+    st.info("Il est nécessaire de charger une image pour réaliser une prédiction")
+    st.info("Vous obtiendrez le type de forme ainsi que son emplacement sur l'image")
 
-    buffer = st.file_uploader("Image here pl0x")
+    buffer = st.file_uploader("Charger ici")
     temp_file = NamedTemporaryFile(delete=False)
     if buffer:
         temp_file.write(buffer.getvalue())
         st.image(load_img(temp_file.name), width = width)
+        nomfichier=buffer.name
+        #Recupération de l'image
         var = load_img(temp_file.name)
     else:
         var=""
-    return var
+        nomfichier=""
+    return var,nomfichier
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 #Fonction de la page principal
-def welcome():        
-    st.subheader('Understanding Clouds from Satellite Images\n')
+def welcome():
+    st.title("Présentation de l'application")
+    st.subheader("Description : \n")
     file10 = open(cheminTextes+"ProjectContext.txt","r+",  encoding="utf-8")
     for line in file10:
             st.write(line)
+    st.subheader("Image d'exemple : \n")
     st.image(cheminImages+'Teaser_AnimationwLabels.gif',use_column_width=True)
     st.write("https://www.kaggle.com/c/understanding_cloud_organization")
+    st.subheader("Equipe du projet : Promotion BootCamp Janvier 2021 \n")
+    st.info("Gregory BEAUME, Thierry Mottet, Thibault REMY") 
 
 #Fonction permettant de selectionner un modele de Deep Learning
 def choixModeleML(image):
+    im=image[0]
+    nomimage=image[1]
     ########################################################################################
-    options = ["1. Model VGG16 Simple",
-    "2. Model VGG19 Simple",
-    "3. Model VGG19 Multiple"]
-    st.subheader("Model selection")
+    options = ["1. Modèle VGG19 Simple",
+    "2. Modèle VGG19 Multiple",
+    "3. Modèle de régression (VGG19)"]
+    st.subheader("Choix du modèle")
     choixutilisateur = st.selectbox(label = "", options = options)
     ########################################################################################
     if(choixutilisateur==options[0]):
-        Modele_TransfertLearning_VGG16Simple(image)
+        Modele_TransfertLearning_VGG19Simple(im)
+        ResumeModele(resumeVGG19Simple)
     elif(choixutilisateur==options[1]):
-        Modele_TransfertLearning_VGG19Simple(image)
+        Modele_TransfertLearning_VGG19Multiple(im)
+        ResumeModele(resumeVGG19Multi)
     elif(choixutilisateur==options[2]):
-        Modele_TransfertLearning_VGG19Multiple(image)
+        Modele_Regression(im, nomimage)
+        ResumeModele(resumeRegression)
 
-#Fonction qui renvoie sur les différentes page de l'analyse des données (statistiques, visualisation, etc..)
-def FirstAnalysis():
-    options = ["Première aperçu des données",
-    "Première visualisation",
-    "Etude Statistique"]
-    choixutilisateur = st.selectbox(label = "Que souhaitez-vous savoir ? ", options = options)
-    ########################################################################################
-    if(choixutilisateur==options[0]):
-        FirstAnalysis_PremierApercuDonnees()
-    elif(choixutilisateur==options[1]):
-        FirstAnalysis_PremierVisualisation()
-    elif(choixutilisateur==options[2]):
-       FirstAnalysis_EtudeStatistique()
+#Fonction permettant d'afficher le resume du modèle utilisé pour la prédiction
+def ResumeModele(fichier):
+    st.subheader("Description du modèle : \n")
+    file10 = open(cheminTextes+fichier,"r+",  encoding="utf-8")
+    for line in file10:
+            st.write(line)
 
-#Fonction renvoyant sur la categorie "Segmentation des données/Premier aperçu des données"
-def FirstAnalysis_PremierApercuDonnees():
-
-    file1 = open(cheminTextes+"monfichier.txt","r+",  encoding="utf-8")
-    file2 = open(cheminTextes+"monfichier2.txt","r+",  encoding="utf-8")
-    file3 = open(cheminTextes+"monfichier3.txt","r+",  encoding="utf-8")
-
-    for line in file1:
-        st.write(line)
+#Fonctions pour la partie exploration des données
+def Exploration_formes():
     
-    st.write("\n")
+    df_count=cheminSources+"df_count.csv"
+    df_corr=cheminSources+"df_corr.csv"
 
-    for line in file2:
-        st.write(line)
-
-    st.write("")
-    st.image(cheminImages+'stat/image1.jpg',use_column_width=True)
-
-    st.write("\n")
-
-    for line in file3:
-        st.write(line)
-
-    st.write("")
-    st.image(cheminImages+'stat/image2.jpg',use_column_width=True)
-
-    st.write("\n")
-
-#Fonction renvoyant sur la categorie "Segmentation des données/Premiere visualisation"
-def FirstAnalysis_PremierVisualisation():
-    st.title("I. Première visualisation\n")
-
-    st.subheader("1) Visualisation d'une image\n")
-    img=retournerImage()
-
-#Fonction renvoyant sur la categorie "Segmentation des données/Etude des statistiques"
-def FirstAnalysis_EtudeStatistique():
-    
     st.set_option('deprecation.showPyplotGlobalUse', False)
 
-    st.write("Nous allons à présent mener quelques études statistiques sommaires, d'abord sur les labels de formes, puis sur les dimensions des formes, et enfin sur les images elles-mêmes.\n")
+    st.title("Exploration\n")
 
-    st.title("I. Etude statistique\n")
-
-    st.subheader("1) Etude statistique des labels de formes\n")
+    st.subheader("Répartition des différentes formes\n")
     st.image(cheminImages+'stat/nbImages.jpg',use_column_width=True)
     st.write("Ci-dessous la distribution du nombre de formes par image\n")
-    filea=cheminSources+"df_count.csv"
+
+    filea=df_count
     df_count = load_data(filea)
     sns.countplot(x ='nb_formes', data = df_count)
     st.pyplot()
     st.write('nombre moyen de formes par images:' , df_count.nb_formes.mean())
     st.write('nombre d images contenant les 4 formes: ', df_count[df_count.nb_formes == 4].count()[0])
 
-    st.subheader("2) Catégorisation exacte des labels de formes\n")
+    st.subheader("Catégorisation exacte des labels de formes\n")
     st.write("Dataframe présentant le nombre de forme par image et les couples présent sur une image : ")
 
-    file=cheminSources+"df_corr.csv"
+    file=df_corr
     df_corr = load_data(file)
     st.write(df_corr)
 
@@ -217,19 +194,10 @@ def FirstAnalysis_EtudeStatistique():
     sns.countplot(y = df_corr['Multilabel'], order = df_corr['Multilabel'].value_counts().index)
     st.pyplot()
 
-    st.subheader("3) Matrice d'adjacence\n")
-    sns.heatmap(df_corr.corr(), cbar = True, annot=True, square = True,cmap = 'coolwarm', fmt = '.2f')
-    st.pyplot()
+def Exploration_couleurs():
+    st.title("Exploration\n")
 
-    st.title("II. Etude statistique des images\n")
-    st.subheader("1) Dimension des images\n")
-    st.image(cheminImages+'stat/dimensionImage.jpg',use_column_width=True)
-    st.write("\n")
-    st.subheader("2) Couleur des images\n")
-
-    file6 = open(cheminTextes+"CouleursImage.txt","r+",  encoding="utf-8")
-    for line in file6:
-        st.write(line)
+    st.subheader("Couleur des images\n")
 
     st.image(cheminImages+'stat/couleur01.jpg',use_column_width=True)
     st.image(cheminImages+'stat/couleur02.jpg',use_column_width=True)
@@ -240,12 +208,20 @@ def FirstAnalysis_EtudeStatistique():
 
     st.write("\n")
 
-    st.title("III. Etude statistique des formes\n")
+def Exploration_dimensions():
+    
+    df_train=cheminSources+"df_train.csv"
 
-    st.subheader("1) Etude statistique des dimensions des formes\n")
+    st.title("Exploration\n")
+
+    st.subheader("Dimension des images\n")
+    st.image(cheminImages+'stat/dimensionImage.jpg',use_column_width=True)
+    st.write("\n")
+
+    st.subheader("Dimensions des formes\n")
     st.write("Diagramme -> Tailles moyennes des formes (donc lorsqu'il y a une forme) indépendamment de la forme")
 
-    file2=cheminSources+"df_train.csv"
+    file2=df_train
     df_train = load_data(file2)
     sns.histplot(df_train[df_train['nb_pixels'] != 0].nb_pixels, bins=20, kde=True,stat = "density")
     st.pyplot()
@@ -285,161 +261,246 @@ def FirstAnalysis_EtudeStatistique():
     for line in file8:
         st.write(line)
 
-    st.subheader("2) Etude statistique des couleurs des formes\n")
-
 #Fonction permettant de faire une prediction sur une image (Avec Transformateur)
 def Modele_TransfertLearning_VGG19Simple(image):
 
     model11 = loadmodel(cheminVGG19Simple,'ModeleTRY-ClassSimple_VGG19FitGenerator_Size600')
 
-    img=image
-    image_size = img_size
+    if(image != ""):
+        img=image
+        image_size = img_size
 
-    img = img.resize((image_size,image_size))
-    img = np.array(img)
-    img = img / 255.0
-    img = img.reshape(1,image_size,image_size,3)
-    img_class=model11.predict(img)[0] 
-    pred_class = list(img_class).index(max(img_class))
+        img = img.resize((image_size,image_size))
+        img = np.array(img)
+        img = img / 255.0
+        img = img.reshape(1,image_size,image_size,3)
+        img_class=model11.predict(img)[0] 
+        pred_class = list(img_class).index(max(img_class))
 
-    if (pred_class == 0) : 
-        pred_class="Fish"
-    elif (pred_class == 1) : 
-        pred_class="Flower" 
-    elif (pred_class == 2) : 
-        pred_class="Sugar" 
-    elif (pred_class == 3) : 
-        pred_class="Gravel"
+        if (pred_class == 0) : 
+            pred_class="Fish"
+        elif (pred_class == 1) : 
+            pred_class="Flower" 
+        elif (pred_class == 2) : 
+            pred_class="Sugar" 
+        elif (pred_class == 3) : 
+            pred_class="Gravel"
 
-    st.write("The selected image is from the class : ",pred_class)
-       
-#Fonction permettant de faire une prediction sur une image (Avec Transformateur)
-def Modele_TransfertLearning_VGG16Simple(image):
-
-    model11 = loadmodel(cheminVGG16Simple,'ModeleTRY-ClassSimple_VGG16FitGenerator_Size600')
-
-    img=image
-    image_size = img_size
-    img = img.resize((image_size,image_size))
-    img = np.array(img)
-    img = img / 255.0
-    img = img.reshape(1,image_size,image_size,3)
-    img_class=model11.predict(img)[0] 
-    pred_class = list(img_class).index(max(img_class))
-
-    if (pred_class == 0) : 
-           pred_class="Fish"
-    elif (pred_class == 1) : 
-           pred_class="Flower" 
-    elif (pred_class == 2) : 
-           pred_class="Sugar" 
-    elif (pred_class == 3) : 
-           pred_class="Gravel"
-
-    st.write("The selected image is from the class : ",pred_class)
+        st.write("L'image sélectionnée est de la classe : ",pred_class)
 
 #Fonction permettant de faire une prediction sur une image (Avec Transformateur)
 def Modele_TransfertLearning_VGG19Multiple(image):
 
     model11 = loadmodel(cheminVGG19Multiple,'model_multi_greg')
 
-    img=image
-    image_size = img_size - 100
-    img = img.resize((image_size,image_size))
+    if(image != ""):
+        img=image
+        image_size = img_size - 100
+        img = img.resize((image_size,image_size))
+        img = np.array(img)
+        img = img / 255.0
+        img = img.reshape(1,image_size,image_size,3)
+        img_class=model11.predict(img)[0] 
+        pred_class = list(img_class).index(max(img_class))
+
+        if (pred_class == 0) : 
+            pred_class="Fish"
+        elif (pred_class == 1) : 
+            pred_class="Flower" 
+        elif (pred_class == 2) : 
+            pred_class="Sugar" 
+        elif (pred_class == 3) : 
+            pred_class="Gravel"
+
+        st.write("L'image sélectionnée est de la classe : ",pred_class)
+
+#Fonction permettant d'afficher la boudingbox
+def show_bounding_box(im, bbox, normalised=True, color='r'):
+    
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    
+    # Signification de bbox
+    img = np.array(im)
+    #img = cv2.imread(image)
+    img_r = cv2.resize(img, (300,300))
+
+    im=img_r
+
+    x, y, w, h = bbox
+    # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+    x1=x-w/2
+    x2=x+w/2
+    y1=y-h/2
+    y2=y+h/2
+    
+    # redimensionner en cas de normalisation
+    if normalised:
+        x1=x1*im.shape[1]
+        x2=x2*im.shape[1]
+        y1=y1*im.shape[0]
+        y2=y2*im.shape[0]
+
+    #On affiche la prédiction, et la valeur réelle de la bouding box
+    st.write("BOUDINGBOX prédite :", bbox)
+
+    # Afficher l'image avec la bouding box    
+    fig, ax = plt.subplots()
+    im = ax.imshow(im)
+    x = [x1,x2,x2,x1,x1]
+    y = [y1,y1,y2,y2,y1]
+    line, = ax.plot(x, y, "b", label = 'Predicted box')
+    legend = ax.legend()
+    st.pyplot()
+
+#Fonction permettant de renvoyer le score de l'IOU
+def list_corners_IOU(y_true, y_pred) : #y_true = list(xmin, xmax, ymin, ymax)
+    xmin = max(y_true[0], y_pred[0])
+    ymin = max(y_true[2], y_pred[2])
+    xmax = min(y_true[1], y_pred[1])
+    ymax = min(y_true[3], y_pred[3])
+    # son aire :
+    interArea = max(0,xmax-xmin+1)*max(0,ymax-ymin+1)
+    # les aires des bbox d'entrée :
+    trueArea = (y_true[1]-y_true[0]+1)*(y_true[3]-y_true[2]+1)
+    predArea = (y_pred[1]-y_pred[0]+1)*(y_pred[3]-y_pred[2]+1)
+    
+    return (interArea / (trueArea + predArea - interArea))
+
+#Fonction qui affiche deux bouding box, la réelle et la prédite d'une image
+def show_img2(img,y_true, bbox):
+
     img = np.array(img)
-    img = img / 255.0
-    img = img.reshape(1,image_size,image_size,3)
-    img_class=model11.predict(img)[0] 
-    pred_class = list(img_class).index(max(img_class))
+    #img_r = cv2.resize(img, (300,300))
+    im=img
 
-    if (pred_class == 0) : 
-        pred_class="Fish"
-    elif (pred_class == 1) : 
-        pred_class="Flower" 
-    elif (pred_class == 2) : 
-        pred_class="Sugar" 
-    elif (pred_class == 3) : 
-        pred_class="Gravel"
+    xt0,yt0,wt0,ht0 = y_true
 
-    st.write("The selected image is from the class : ",pred_class)
+    h_min=xt0
+    h_max=yt0
+    l_min=wt0
+    l_max=ht0
+
+    X = 0.5 * (l_min+l_max)
+    Y= 0.5 * (h_min+h_max)
+    w= (l_max - l_min)
+    h= (h_max-h_min)
+
+    h_factor = 1/1400
+    w_factor = 1/2100
+    xt0 = w_factor* X
+    yt0 = h_factor* Y
+    wt0 = w_factor* w
+    ht0 = h_factor* h
+
+    #On met à jour la variable y_true avec les variables normalisées
+    y_true=xt0,yt0,wt0,ht0
+
+    #On affiche la prédiction, et la valeur réelle de la bouding box
+    st.write("BOUDINGBOX prédite :", bbox)
+    st.write("BOUDINGBOX réelle :", y_true)
+
+    #[y_true[i] for i in range(len(y_true))]
+    xt1= (xt0-wt0/2)*2100
+    yt1= (yt0-ht0/2)*1400
+    xt2= (xt0+wt0/2)*2100
+    yt2= (yt0+ht0/2)*1400
+    
+    xp0,yp0,wp0,hp0 = bbox
+    
+    #print(xp0,yp0,wp0,hp0)
+    xp1= max((xp0-abs(wp0)/2)*2100,0)
+    xp2= min((xp0+abs(wp0)/2)*2100,2100)
+    yp1= max((yp0-abs(hp0)/2)*1400,0)
+    yp2= min((yp0+abs(hp0)/2)*1400,1400)
+
+    #On calcule la valeur de l'IOU
+    IOU = list_corners_IOU(y_true, bbox)
+    #st.write("Valeur de l'IOU : ", IOU)
+
+    # Afficher l'image avec la bouding box    
+    xt1 = [xt1,xt2,xt2,xt1,xt1]
+    yt1 = [yt1,yt1,yt2,yt2,yt1]
+    xp1 = [xp1,xp2,xp2,xp1,xp1]
+    yp1 = [yp1,yp1,yp2,yp2,yp1]
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(im)
+    line, = ax.plot(xt1, yt1, "r", label = 'True box')
+    line2, = ax.plot(xp1, yp1, "b", label = 'Predicted box')
+    legend = ax.legend(title= 'IOU = '+str(round(IOU)))
+    st.pyplot()
+
+#Fonction permettant de faire une prediction sur l'emplacement de la forme sur l'image (boudingbox)
+def Modele_Regression(image, nomimage):
+
+    file=cheminSources+"train_labels.csv"
+    model = loadmodel(cheminRegression,'modelVGG19_YOLOpenalise_bboxfish_v3bis_300')
+
+    if(image != ""):
+        img = np.array(image)
+        #img = cv2.imread(image)
+        img_r = cv2.resize(img, (300,300))
+        x,y,w,h = model.predict(np.array([img_r]))[0]
+        bbox = x,y,w,h
+
+        y_true=()
+
+        train_labels = load_data(file)
+        vare=""
+        
+        i=0
+        for nomfichier in train_labels.filename:
+            if (nomfichier == nomimage):
+                vare="BON"
+                e=i
+            i=i+1
+
+        if(vare=="BON"):
+            xmin=train_labels.xmin[e]
+            ymin=train_labels.ymin[e]
+            xmax=train_labels.xmax[e]
+            ymax=train_labels.ymax[e]
+            y_true=(xmin,ymin,xmax,ymax)
+            st.write("Nom de l'image : ",nomimage)
+            show_img2(image,y_true, bbox)
+        else:
+            st.write("Nom de l'image : ",nomimage)
+            show_bounding_box(image, bbox)
+
+#Fonction permettant de prédire une image chargée
+def cloudDetection():
+    st.title("Cloud detection")
+    st.text('Construit avec Streamlit,VGG19 and OpenCV')
+    st.info("Les formes possible sont : Fish, Flower, Sugar, Gravel")
+
+    our_image=retournerImage()
+
+    if(our_image == ""):
+        st.write("NOT IMAGE")
+    else:
+        #On lance une prédiction sur l'image modifiée        
+        choixModeleML(our_image)
 
 #Pages de l'application
-def foo():    
-    st.title("Context presentation")
+def foo():
     welcome()
-
-def bar1():
-    st.title("Informations of Data")
-    FirstAnalysis()
 
 def main():
 
-    menu = ['Cloud Detection','About']
+    menu = ['Introduction', 'Exploration', 'Cloud Detection']
     choice = st.sidebar.selectbox('Menu',menu)
 
     if choice == 'Cloud Detection':
+        cloudDetection()
 
-        st.title("Cloud detection")
-        st.text('Build with Streamlit,VGG19 and OpenCV')
-        st.info("Detectable form possible : Fish, Flower, Sugar, Gravel")
+    elif choice == 'Introduction':
+        foo()
 
-        st.subheader('Original Image')
-        our_image=retournerImage()
-
-        if(our_image == ""):
-            st.write("NOT IMAGE")
-        else:
-            enhance_type = st.sidebar.radio('Enhance Type', ['Original', 'Gray-Scale', 'Contrast', 'Brightness', 'Blurring'])
-
-            if enhance_type == 'Gray-Scale':
-                new_img = np.array(our_image.convert('RGB'))
-                img = cv2.cvtColor(new_img, 1)
-                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                our_image=Image.fromarray(gray)
-                #Reconversion en RGB (image toujours en Gris quand même) -> permet fonctionnement algo. deep
-                our_image = our_image.convert("RGB")
-                st.subheader('Modified Image')
-                st.image(our_image, width = width)
-
-            if enhance_type == 'Contrast':
-                c_rate = st.sidebar.slider('Contrast', 0.5, 3.5)
-                enhancer = ImageEnhance.Contrast(our_image)
-                img_output = enhancer.enhance(c_rate)
-                our_image=img_output
-                st.subheader('Modified Image')
-                st.image(our_image, width = width)
-
-            if enhance_type == 'Brightness':
-                c_rate = st.sidebar.slider('Brightness', 0.5, 3.5)
-                enhancer = ImageEnhance.Brightness(our_image)
-                img_output = enhancer.enhance(c_rate)
-                our_image=img_output
-                st.subheader('Modified Image')
-                st.image(our_image, width = width)
-
-            if enhance_type == 'Blurring':
-                new_img = np.array(our_image.convert('RGB'))
-                blur_rate = st.sidebar.slider('Blurring', 0.5, 3.5)
-                img = cv2.cvtColor(new_img, 1)
-                blur_img = cv2.GaussianBlur(img, (11, 11), blur_rate)
-                our_image=Image.fromarray(blur_img)
-                st.subheader('Modified Image')
-                st.image(our_image, width = width)
-            else:
-                pass
-
-            #On lance une prédiction sur l'image modifiée        
-            choixModeleML(our_image)
-
-
-    elif choice == 'About':
-        st.subheader('Project informations')
-        st.info("Nous avons developpé un algorithme de DeepLearning permettant d'identifier une forme de nuage sur une image")
-        st.info("Cela réponds à un challenge initié sur la plateforme Kaggle et présenté ci-dessous")
-        
+    elif choice == 'Exploration':
         app = MultiApp()
-        app.add_app("Context presentation", foo)
-        app.add_app("Informations of data", bar1)
+        app.add_app("Répartition des différentes formes", Exploration_formes)
+        app.add_app("Répartion des couleurs", Exploration_couleurs)
+        app.add_app("Répartion des dimensions des formes", Exploration_dimensions)
         app.run()
 
 if __name__ == '__main__':
