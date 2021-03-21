@@ -48,15 +48,23 @@ cheminModeles = "./models/"
 cheminVGG16Simple = cheminModeles+"VGG16Simple/c/"
 cheminVGG19Simple = cheminModeles+"VGG19Simple/c/"
 cheminVGG19Multiple = cheminModeles+"VGG19Multiple/"
-cheminRegression = cheminModeles+"Regression/"
+cheminRegressionFish = cheminModeles+"Regression/Fish/"
+cheminRegressionFlower = cheminModeles+"Regression/Flower/"
+cheminRegressionSugar = cheminModeles+"Regression/Sugar/"
+cheminRegressionGravel = cheminModeles+"Regression/Gravel/"
+cheminYolo = cheminModeles+"YOLO/"
 cheminImagesTest = "./testimages/"
 resumeVGG19Simple = "ResumeModeleVGG19Simple.txt"
 resumeVGG19Multi = "ResumeModeleVGG19Multi.txt"
 resumeRegression = "ResumeModeleRegression.txt"
 
-# Constants
+# Constantes
 img_size = 600
 width = 600
+
+#Constantes pour Yolo
+nb_class = 0
+output_shape = (5, 5)
 
 #Enregistrement en mémoire des fonction déjà chargées
 @st.cache(suppress_st_warning=True)
@@ -139,7 +147,8 @@ def choixModeleML(image):
     ########################################################################################
     options = ["1. Modèle VGG19 Simple",
     "2. Modèle VGG19 Multiple",
-    "3. Modèle de régression (VGG19)"]
+    "3. Modèle de régression (VGG19)",
+    "4. Modèle YOLO"]
     st.subheader("Choix du modèle")
     choixutilisateur = st.selectbox(label = "", options = options)
     ########################################################################################
@@ -152,6 +161,9 @@ def choixModeleML(image):
     elif(choixutilisateur==options[2]):
         Modele_Regression(im, nomimage)
         ResumeModele(resumeRegression)
+    elif(choixutilisateur==options[3]):
+        Modele_YOLO(im, nomimage)
+        #ResumeModele(resumeRegression)
 
 #Fonction permettant d'afficher le resume du modèle utilisé pour la prédiction
 def ResumeModele(fichier):
@@ -313,7 +325,9 @@ def Modele_TransfertLearning_VGG19Multiple(image):
             pred_class="Gravel"
 
         st.write("L'image sélectionnée est de la classe : ",pred_class)
+        return pred_class
 
+#########################################################FONCTION POUR LA REGRESSION#######################################################
 #Fonction permettant d'afficher la boudingbox
 def show_bounding_box(im, bbox, normalised=True, color='r'):
     
@@ -375,26 +389,6 @@ def show_img2(img,y_true, bbox):
 
     xt0,yt0,wt0,ht0 = y_true
 
-    h_min=xt0
-    h_max=yt0
-    l_min=wt0
-    l_max=ht0
-
-    X = 0.5 * (l_min+l_max)
-    Y= 0.5 * (h_min+h_max)
-    w= (l_max - l_min)
-    h= (h_max-h_min)
-
-    h_factor = 1/1400
-    w_factor = 1/2100
-    xt0 = w_factor* X
-    yt0 = h_factor* Y
-    wt0 = w_factor* w
-    ht0 = h_factor* h
-
-    #On met à jour la variable y_true avec les variables normalisées
-    y_true=xt0,yt0,wt0,ht0
-
     #On affiche la prédiction, et la valeur réelle de la bouding box
     st.write("BOUDINGBOX prédite :", bbox)
     st.write("BOUDINGBOX réelle :", y_true)
@@ -430,44 +424,375 @@ def show_img2(img,y_true, bbox):
     legend = ax.legend(title= 'IOU = '+str(round(IOU)))
     st.pyplot()
 
+###########################################################################################################################################
+
 #Fonction permettant de faire une prediction sur l'emplacement de la forme sur l'image (boudingbox)
 def Modele_Regression(image, nomimage):
 
-    file=cheminSources+"train_labels.csv"
-    model = loadmodel(cheminRegression,'modelVGG19_YOLOpenalise_bboxfish_v3bis_300')
+    file=cheminSources+"train_with_bbox_finalversion.csv"
 
     if(image != ""):
+
         img = np.array(image)
         #img = cv2.imread(image)
         img_r = cv2.resize(img, (300,300))
-        x,y,w,h = model.predict(np.array([img_r]))[0]
-        bbox = x,y,w,h
-
+        
         y_true=()
+        bbox=()
+
+        #Variable permettant de récupérer la classe de l'image
+        classe=""
 
         train_labels = load_data(file)
         vare=""
         
         i=0
-        for nomfichier in train_labels.filename:
+        for nomfichier in train_labels.ImageId:
             if (nomfichier == nomimage):
                 vare="BON"
                 e=i
             i=i+1
 
+        #Si l'image est connue, on affiche la bouding box réelle et la bouding box prédite
         if(vare=="BON"):
-            xmin=train_labels.xmin[e]
-            ymin=train_labels.ymin[e]
-            xmax=train_labels.xmax[e]
-            ymax=train_labels.ymax[e]
-            y_true=(xmin,ymin,xmax,ymax)
+            X=train_labels.X[e]
+            Y=train_labels.Y[e]
+            w=train_labels.w[e]
+            h=train_labels.h[e]
+            #classe=train_labels.Label[e]
+            #st.write("La forme sur l'image est :",classe)
+
+            #On récupère la classe de l'image
+            classe = Modele_TransfertLearning_VGG19Multiple(image)
+            
+            #On réalise une regression suivant le type de forme pour trouver la boudingbox
+            if (classe == "Fish"):
+                modelFish = loadmodel(cheminRegressionFish,'modelREGRESSION_VGG19_Fish')
+                model=modelFish
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Flower"):
+                modelFlower = loadmodel(cheminRegressionFlower,'modelREGRESSION_VGG19_Flower')
+                model=modelFlower
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Sugar"):
+                modelSugar = loadmodel(cheminRegressionSugar,'modelREG_VGG19_Sugar')
+                model=modelSugar
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Gravel"):
+                modelGravel = loadmodel(cheminRegressionGravel,'modelREG_VGG19_Gravel')
+                model=modelGravel
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+
+            y_true=(X,Y,w,h)
             st.write("Nom de l'image : ",nomimage)
             show_img2(image,y_true, bbox)
+
+        #Si l'image n'est pas connue, on affiche la bouding box prédite uniquement
         else:
             st.write("Nom de l'image : ",nomimage)
+
+            #On récupère la classe de l'image
+            classe = Modele_TransfertLearning_VGG19Multiple(image)
+
+            if (classe == "Fish") :
+                modelFish = loadmodel(cheminRegressionFish,'modelREGRESSION_VGG19_Fish')
+                model=modelFish
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Flower") : 
+                modelFlower = loadmodel(cheminRegressionFlower,'modelREGRESSION_VGG19_Flower')
+                model=modelFlower
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Sugar") : 
+                modelSugar = loadmodel(cheminRegressionSugar,'modelREG_VGG19_Sugar')
+                model=modelSugar
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            elif (classe == "Gravel") : 
+                modelGravel = loadmodel(cheminRegressionGravel,'modelREG_VGG19_Gravel')
+                model=modelGravel
+                x,y,w,h = model.predict(np.array([img_r]))[0]
+                bbox = x,y,w,h
+            
+            st.write(bbox)
+            st.write("L'image sélectionnée est de la classe XXX : ",classe)
             show_bounding_box(image, bbox)
 
-#Fonction permettant de prédire une image chargée
+#########################################################FONCTION POUR LE YOLO#############################################################
+def convert_target(bboxes,Label, output_shape, nb_classes):
+    y_target = np.zeros([output_shape[0], output_shape[1], 1+4+nb_classes])
+    lx=1/output_shape[1]
+    ly=1/output_shape[0]
+    #print(Label)
+    # on identifie la classe parcourue
+    if Label == 'Fish':
+        c=5
+    elif Label == 'Flower':
+        c=6
+    elif Label == 'Gravel':
+        c=7
+    else:
+        c=8
+
+    x, y, w, h = bboxes
+    idx_x = int(x//lx)
+    idx_y = int(y//ly)
+    # Presence of object
+    y_target[idx_y, idx_x, 0] = 1
+    # Coordinate x
+    y_target[idx_y, idx_x, 1] = 2*(x/lx - (idx_x+0.5))
+    # Coordinate y
+    y_target[idx_y, idx_x, 2] = 2*(y/ly - (idx_y+0.5))
+    # Coordinate w
+    y_target[idx_y, idx_x, 3] = w
+    # Coordinate h
+    y_target[idx_y, idx_x, 4] = h
+    # Class of object
+    #print(c)
+    y_target[idx_y, idx_x, c] = 1
+    #print(y_target.shape)   
+    return y_target.reshape([-1, 1+4 +nb_classes])
+    #return y_target
+
+def multi_convert_target(ImageId, df):
+    #print(ImageId)
+    #print(ImageId[13:])
+    data = df[df['ImageId']==ImageId[0:]]
+    #print(data.head())
+    data['target'] = data.apply(lambda x: convert_target(x.bbox,x.Label,output_shape,4),axis = 1)
+    y_multi_target = data['target'].sum()
+    return y_multi_target
+
+def check_validity(y_target):
+    check = max(y_target[:,0])
+    if check > 1:
+        return 1
+    else:
+        return 0
+
+def transform_netout(y_pred_raw):
+    y_pred_xy = (tf.nn.tanh(y_pred_raw[..., 1:3]))
+    y_pred_wh = tf.sigmoid(y_pred_raw[..., 3:5])
+    y_pred_conf = tf.sigmoid(y_pred_raw[..., :1])
+    y_pred_class = tf.sigmoid(y_pred_raw[..., 5:9])
+    return tf.concat([y_pred_conf, y_pred_xy, y_pred_wh,y_pred_class], -1)
+
+def generate_yolo_grid(g):
+    c_x = tf.cast(tf.reshape(tf.tile(tf.range(g), [g]), (1, g, g)), 'float32')
+    c_y = tf.transpose(c_x, (0,2,1))
+    return tf.stack([tf.reshape(c_x, (-1, g*g)), tf.reshape(c_y, (-1, g*g))] , -1)
+
+c_grid = generate_yolo_grid(output_shape[0])
+
+def proccess_xy(y_true_raw):
+    y_true_xy = ((y_true_raw[..., 1:3]+1)/2 + c_grid)/output_shape[0]
+    y_true_wh = y_true_raw[..., 3:5]
+    y_true_conf = y_true_raw[..., :1]
+    y_true_class = y_true_raw[..., 5:9]
+    return tf.concat([y_true_conf, y_true_xy, y_true_wh,y_true_class], -1) 
+
+@tf.function
+def load_image(filepath, resize=(320,320)):
+    im = tf.io.read_file( filepath)
+    im = tf.image.decode_png(im, channels=3)
+    return tf.image.resize(im, resize)
+
+def show_img(img, model, threshold=0.2):
+    pred = model(np.array([img], dtype=np.float32))[0]
+    pred = transform_netout(pred)
+    #print(pred)
+
+    bboxes_pred = pred_bboxes(pred, threshold)
+    plt.imshow(X_t[0]/255)
+    for bbox in bboxes_pred:
+        bbox = bbox[1:]
+        show_bounding_box(img/255, bbox)
+
+def show_bounding_box(im, bbox, normalised=True, Color='r', Label = None):
+    # Signification de bbox
+    x, y, w, h = bbox
+    # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+    x1=x-w/2
+    x2=x+w/2
+    y1=y-h/2
+    y2=y+h/2
+    
+    # redimensionner en cas de normalisation
+    if normalised:
+        x1=x1*im.shape[1]
+        x2=x2*im.shape[1]
+        y1=y1*im.shape[0]
+        y2=y2*im.shape[0]
+    
+    # Afficher l'image avec la bouding box    
+    x = [x1,x2,x2,x1,x1]
+    y = [y1,y1,y2,y2,y1]
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(im)
+    line, = ax.plot(x, y, "r", Label = Label)
+    legend = ax.legend(title= 'Label')
+    st.pyplot()
+
+def pred_bboxes(y, threshold):
+    y_xy = tf.cast(y, tf.float32)
+    y_xy = tf.expand_dims(y_xy, axis=0)
+    y_xy = proccess_xy(y_xy)[0]
+    #return y_xy
+    bboxes =  sorted(y_xy.numpy(), key=lambda x: x[0], reverse=True)
+    bboxes = np.array(bboxes)
+    result = bboxes[bboxes[:,0]>threshold]
+    # on doit ajuster les valeurs pour assurer la présence de classes différentes
+    if len(result)== 0:
+        # dans ce cas il n'y a aucune box retenue, on doit en mettre une
+        kmax = np.argmax(bboxes[:,0]) 
+        result = bboxes[kmax,:].reshape([1,9])
+    #else:
+    # pour chaque bbox on met toutes les probas de classe à 0 sauf la plus haute
+    for k in range(len(result)):
+        imax = np.argmax(result[k,5:])
+        pmax = result[k,5+imax]
+        result[k,5:]=0
+        result[k,5+imax]=pmax
+        # ensuite, on met la  l la proba de chaque classe à 1 pour celle qui a la proba max, et 0 pour les autres
+        # pour éviter des doublons
+    for i in range(4):
+            kmax = np.argmax(result[:,5+i]*result[:,0])
+            pmax = result[kmax,5+i]
+            result[:,5+i]=0
+            if pmax > 0:
+                result[kmax,5+i]=1
+        #enfin on vire les bbox qui ne prédisent plus de classes après notre post processing
+    for k in range(len(result)):
+        #print(element)
+        if np.max(result[k,5:]) == 0:
+            result = np.delete(result, k,0)
+    return result 
+
+def compute_y_pred(imgpath, resize=(160,160)):
+    im = tf.io.read_file(imgpath)
+    im = tf.image.decode_png(im, channels=3)
+    #im_shape = tf.shape(im)
+    im = tf.image.resize(im, resize)
+    pred = model(np.array([im], dtype=np.float32))[0]
+    pred = transform_netout(pred)
+    #bboxes_pred = pred_bboxes(pred)
+    #print(bboxes_pred)
+    return pred
+
+def show_img_true(imgpath, y_true, threshold=0.5,resize=(160,160)):
+    im = tf.io.read_file(imgpath)
+    im = tf.image.decode_png(im, channels=3)
+    #im_shape = tf.shape(im)
+    im = tf.image.resize(im, resize)
+    pred = y_true
+    bboxes_pred = pred_bboxes(pred, threshold)
+    #print(bboxes_pred)
+    #plt.imshow(im/255)
+    for bbox in bboxes_pred:
+        if bbox[5] == 1:
+            col = 'r'
+            lab = 'Fish'
+        if bbox[6] == 1:
+            col = 'b'
+            lab = 'Flower'
+        if bbox[7] == 1:
+            col = 'g'
+            lab = 'Gravel'
+        if bbox[8] == 1:
+            col = 'y'
+            lab = 'Sugar'
+        bbox = bbox[1:5]
+        show_bounding_box(im/255, bbox, Color = col,Label = lab)
+
+#Fonction permettant de traiter/convertir le CSV d'entrée en un format compris pour YOLO (Tenseurs)
+def traitementDF():
+    file=cheminSources+"train_with_bbox_finalversion.csv"
+    data_df = load_data(file)
+
+    larg = 2100
+    haut = 1400
+    data_df['xmoy'] = (data_df.xmax + data_df.xmin)/2/larg
+    data_df['ymoy'] = (data_df.ymax + data_df.ymin)/2/haut
+    data_df['w'] = (data_df.xmax - data_df.xmin)/larg
+    data_df['h'] = (data_df.ymax - data_df.ymin)/haut
+
+    data_df['bbox'] = data_df.apply(lambda x : [x.xmoy,x.ymoy,x.w,x.h], axis = 1)
+    #st.write(data_df)
+
+    images_names = data_df['ImageId'].unique()
+
+    target_data = pd.DataFrame(images_names, columns = ['ImageId'])
+    #st.write(target_data)
+
+    target_data['y_target'] = target_data['ImageId'].apply(lambda x: multi_convert_target(x,data_df))
+    ROMU = target_data.shape
+    #st.write("La valeur est : ",ROMU)
+
+
+    target_data['check_grid'] = target_data['y_target'].apply(check_validity)
+    target_data = target_data[target_data['check_grid'] == 0]
+    target_data = target_data.drop(['check_grid'], axis = 1)
+
+    target_data = target_data.reset_index(drop=True)
+
+    #st.write(target_data)
+    return target_data
+
+############################################################################################################################################
+
+#Fonction permettant de faire une prediction sur l'emplacement de la forme sur l'image + classe de la forme -> YOLO
+def Modele_YOLO(image, nomimage):
+
+    if(image != ""):
+
+        #Chargement des poids de modèle YOLO
+        model = loadmodel(cheminYolo,'modelEfficientNet_YOLO_finalversion_V2')
+
+        #Chargement du CSV converti en tensors
+        target_data=traitementDF()
+
+        #Variable permettant de vérifier si l'image chargée est connue du dataframe
+        vare=""
+        
+        i=0
+        for nomfichier in target_data.ImageId:
+            if (nomfichier == nomimage):
+                vare="BON"
+                e=i
+            i=i+1
+
+        #Si l'image est connue, on lance la prédiction avec le modèle YOLO
+        if(vare=="BON"):
+            #On recherche l'indice d'après le nom de l'image
+            index = target_data[target_data['ImageId']==nomimage].index.tolist()
+            index = index[0]
+
+            #On charge l'image en mémoire et on récupère la valeur de la boudingbox connu (y_true)
+            img_name = target_data.iloc[index,0]
+            img = load_image(img_name)
+            y_true = target_data.iloc[index,1]
+
+            st.write(y_true)
+
+            #On réalise une prédiction sur l'image, trouver y_pred
+            resize=(160,160)
+
+            im = tf.io.read_file(img_name)
+            im = tf.image.decode_png(im, channels=3)
+            im = tf.image.resize(im, resize)
+            pred = model(np.array([im], dtype=np.float32))[0]
+            y_pred = transform_netout(pred)
+
+            #On affiche à l'écran le résultat : boudingbox prédite + classe de la forme
+            show_img_true(img_name,y_pred,threshold = 0.45)
+
+#Fonction principal pour la partie détection d'une forme sur une image
 def cloudDetection():
     st.title("Cloud detection")
     st.text('Construit avec Streamlit,VGG19 and OpenCV')
