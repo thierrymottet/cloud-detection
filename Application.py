@@ -710,39 +710,10 @@ def show_img_true(imgpath, y_true, threshold=0.5,resize=(160,160)):
         bbox = bbox[1:5]
         show_bounding_box(im/255, bbox, Color = col,Label = lab)
 
-#Fonction permettant de traiter/convertir le CSV d'entrée en un format compris pour YOLO (Tenseurs)
-def traitementDF():
-    file=cheminSources+"train_with_bbox_finalversion.csv"
+def getdfYOLO():
+    file=cheminSources+"df_targetdata.csv"
     data_df = load_data(file)
-
-    larg = 2100
-    haut = 1400
-    data_df['xmoy'] = (data_df.xmax + data_df.xmin)/2/larg
-    data_df['ymoy'] = (data_df.ymax + data_df.ymin)/2/haut
-    data_df['w'] = (data_df.xmax - data_df.xmin)/larg
-    data_df['h'] = (data_df.ymax - data_df.ymin)/haut
-
-    data_df['bbox'] = data_df.apply(lambda x : [x.xmoy,x.ymoy,x.w,x.h], axis = 1)
-    #st.write(data_df)
-
-    images_names = data_df['ImageId'].unique()
-
-    target_data = pd.DataFrame(images_names, columns = ['ImageId'])
-    #st.write(target_data)
-
-    target_data['y_target'] = target_data['ImageId'].apply(lambda x: multi_convert_target(x,data_df))
-    ROMU = target_data.shape
-    #st.write("La valeur est : ",ROMU)
-
-
-    target_data['check_grid'] = target_data['y_target'].apply(check_validity)
-    target_data = target_data[target_data['check_grid'] == 0]
-    target_data = target_data.drop(['check_grid'], axis = 1)
-
-    target_data = target_data.reset_index(drop=True)
-
-    #st.write(target_data)
-    return target_data
+    return data_df
 
 ############################################################################################################################################
 
@@ -755,7 +726,7 @@ def Modele_YOLO(image, nomimage):
         model = loadmodel(cheminYolo,'modelEfficientNet_YOLO_finalversion_V2')
 
         #Chargement du CSV converti en tensors
-        target_data=traitementDF()
+        target_data=getdfYOLO()
 
         #Variable permettant de vérifier si l'image chargée est connue du dataframe
         vare=""
@@ -767,15 +738,20 @@ def Modele_YOLO(image, nomimage):
                 e=i
             i=i+1
 
+        st.write("VVVVVVVVVVVVV : ", vare)
+
         #Si l'image est connue, on lance la prédiction avec le modèle YOLO
         if(vare=="BON"):
             #On recherche l'indice d'après le nom de l'image
             index = target_data[target_data['ImageId']==nomimage].index.tolist()
             index = index[0]
 
+            st.write("MON INDEX : ", index)
+
             #On charge l'image en mémoire et on récupère la valeur de la boudingbox connu (y_true)
-            img_name = target_data.iloc[index,0]
-            img = load_image(img_name)
+            #img_name = target_data.iloc[index,0]
+            img_name = nomimage
+            #img = load_image(img_name)
             y_true = target_data.iloc[index,1]
 
             st.write(y_true)
