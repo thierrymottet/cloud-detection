@@ -54,9 +54,28 @@ cheminRegressionSugar = cheminModeles+"Regression/Sugar/"
 cheminRegressionGravel = cheminModeles+"Regression/Gravel/"
 cheminYolo = cheminModeles+"YOLO/"
 cheminImagesTest = "./testimages/"
+
+#Texte txt (affichage de texte sur les pages)
 resumeVGG19Simple = "ResumeModeleVGG19Simple.txt"
 resumeVGG19Multi = "ResumeModeleVGG19Multi.txt"
 resumeRegression = "ResumeModeleRegression.txt"
+projetcontexte = "ProjectContext.txt"
+
+#CSV (récupéré des différents NoteBooks/Projet)
+dfcount = "df_count.csv"
+dfcorr = "df_corr.csv"
+dftrain = "df_train.csv"
+dftrainwithbbox = "train_with_bbox_finalversion.csv"
+dftargetdata = "df_targetdata.csv"
+
+#Modele (fichier JSON + H5)
+ClassSimple_VGG19 = "ModeleTRY-ClassSimple_VGG19FitGenerator_Size600"
+ClassMulti_VGG19 = "model_multi_greg"
+modelREGRESSION_VGG19_Fish = "modelREGRESSION_VGG19_Fish"
+modelREGRESSION_VGG19_Flower = "modelREGRESSION_VGG19_Flower"
+modelREGRESSION_VGG19_Sugar = "modelREG_VGG19_Sugar"
+modelREGRESSION_VGG19_Gravel = "modelREG_VGG19_Gravel"
+model_YOLO = "modelEfficientNet_YOLO_finalversion_V2"
 
 # Constantes
 img_size = 600
@@ -131,7 +150,7 @@ def retournerImage():
 def welcome():
     st.title("Présentation de l'application")
     st.subheader("Description : \n")
-    file10 = open(cheminTextes+"ProjectContext.txt","r+",  encoding="utf-8")
+    file10 = open(cheminTextes+projetcontexte,"r+",  encoding="utf-8")
     for line in file10:
             st.write(line)
     st.subheader("Image d'exemple : \n")
@@ -154,13 +173,13 @@ def choixModeleML(image):
     ########################################################################################
     if(choixutilisateur==options[0]):
         Modele_TransfertLearning_VGG19Simple(im)
-        ResumeModele(resumeVGG19Simple)
+        #ResumeModele(resumeVGG19Simple)
     elif(choixutilisateur==options[1]):
         Modele_TransfertLearning_VGG19Multiple(im)
-        ResumeModele(resumeVGG19Multi)
+        #ResumeModele(resumeVGG19Multi)
     elif(choixutilisateur==options[2]):
         Modele_Regression(im, nomimage)
-        ResumeModele(resumeRegression)
+        #ResumeModele(resumeRegression)
     elif(choixutilisateur==options[3]):
         Modele_YOLO(im, nomimage)
         #ResumeModele(resumeRegression)
@@ -175,8 +194,8 @@ def ResumeModele(fichier):
 #Fonctions pour la partie exploration des données
 def Exploration_formes():
     
-    df_count=cheminSources+"df_count.csv"
-    df_corr=cheminSources+"df_corr.csv"
+    df_count=cheminSources+dfcount
+    df_corr=cheminSources+dfcorr
 
     st.set_option('deprecation.showPyplotGlobalUse', False)
 
@@ -222,7 +241,7 @@ def Exploration_couleurs():
 
 def Exploration_dimensions():
     
-    df_train=cheminSources+"df_train.csv"
+    df_train=cheminSources+dftrain
 
     st.title("Exploration\n")
 
@@ -276,7 +295,7 @@ def Exploration_dimensions():
 #Fonction permettant de faire une prediction sur une image (Avec Transformateur)
 def Modele_TransfertLearning_VGG19Simple(image):
 
-    model11 = loadmodel(cheminVGG19Simple,'ModeleTRY-ClassSimple_VGG19FitGenerator_Size600')
+    model11 = loadmodel(cheminVGG19Simple,ClassSimple_VGG19)
 
     if(image != ""):
         img=image
@@ -303,7 +322,7 @@ def Modele_TransfertLearning_VGG19Simple(image):
 #Fonction permettant de faire une prediction sur une image (Avec Transformateur)
 def Modele_TransfertLearning_VGG19Multiple(image):
 
-    model11 = loadmodel(cheminVGG19Multiple,'model_multi_greg')
+    model11 = loadmodel(cheminVGG19Multiple, ClassMulti_VGG19)
 
     if(image != ""):
         img=image
@@ -429,7 +448,7 @@ def show_img2(img,y_true, bbox):
 #Fonction permettant de faire une prediction sur l'emplacement de la forme sur l'image (boudingbox)
 def Modele_Regression(image, nomimage):
 
-    file=cheminSources+"train_with_bbox_finalversion.csv"
+    file=cheminSources+dftrainwithbbox
 
     if(image != ""):
 
@@ -467,22 +486,22 @@ def Modele_Regression(image, nomimage):
             
             #On réalise une regression suivant le type de forme pour trouver la boudingbox
             if (classe == "Fish"):
-                modelFish = loadmodel(cheminRegressionFish,'modelREGRESSION_VGG19_Fish')
+                modelFish = loadmodel(cheminRegressionFish, modelREGRESSION_VGG19_Fish)
                 model=modelFish
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Flower"):
-                modelFlower = loadmodel(cheminRegressionFlower,'modelREGRESSION_VGG19_Flower')
+                modelFlower = loadmodel(cheminRegressionFlower, modelREGRESSION_VGG19_Flower)
                 model=modelFlower
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Sugar"):
-                modelSugar = loadmodel(cheminRegressionSugar,'modelREG_VGG19_Sugar')
+                modelSugar = loadmodel(cheminRegressionSugar, modelREGRESSION_VGG19_Sugar)
                 model=modelSugar
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Gravel"):
-                modelGravel = loadmodel(cheminRegressionGravel,'modelREG_VGG19_Gravel')
+                modelGravel = loadmodel(cheminRegressionGravel, modelREGRESSION_VGG19_Gravel)
                 model=modelGravel
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
@@ -499,22 +518,22 @@ def Modele_Regression(image, nomimage):
             classe = Modele_TransfertLearning_VGG19Multiple(image)
 
             if (classe == "Fish") :
-                modelFish = loadmodel(cheminRegressionFish,'modelREGRESSION_VGG19_Fish')
+                modelFish = loadmodel(cheminRegressionFish, modelREGRESSION_VGG19_Fish)
                 model=modelFish
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Flower") : 
-                modelFlower = loadmodel(cheminRegressionFlower,'modelREGRESSION_VGG19_Flower')
+                modelFlower = loadmodel(cheminRegressionFlower, modelREGRESSION_VGG19_Flower)
                 model=modelFlower
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Sugar") : 
-                modelSugar = loadmodel(cheminRegressionSugar,'modelREG_VGG19_Sugar')
+                modelSugar = loadmodel(cheminRegressionSugar, modelREGRESSION_VGG19_Sugar)
                 model=modelSugar
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
             elif (classe == "Gravel") : 
-                modelGravel = loadmodel(cheminRegressionGravel,'modelREG_VGG19_Gravel')
+                modelGravel = loadmodel(cheminRegressionGravel, modelREGRESSION_VGG19_Gravel)
                 model=modelGravel
                 x,y,w,h = model.predict(np.array([img_r]))[0]
                 bbox = x,y,w,h
@@ -711,7 +730,7 @@ def show_img_true(imgpath, y_true, threshold=0.5,resize=(160,160)):
         show_bounding_box(im/255, bbox, Color = col,Label = lab)
 
 def getdfYOLO():
-    file=cheminSources+"df_targetdata.csv"
+    file=cheminSources+dftargetdata
     data_df = load_data(file)
     return data_df
 
@@ -723,7 +742,7 @@ def Modele_YOLO(image, nomimage):
     if(image != ""):
 
         #Chargement des poids de modèle YOLO
-        model = loadmodel(cheminYolo,'modelEfficientNet_YOLO_finalversion_V2')
+        model = loadmodel(cheminYolo, model_YOLO)
 
         #Chargement du CSV converti en tensors
         target_data=getdfYOLO()
@@ -738,15 +757,11 @@ def Modele_YOLO(image, nomimage):
                 e=i
             i=i+1
 
-        st.write("VVVVVVVVVVVVV : ", vare)
-
         #Si l'image est connue, on lance la prédiction avec le modèle YOLO
         if(vare=="BON"):
             #On recherche l'indice d'après le nom de l'image
             index = target_data[target_data['ImageId']==nomimage].index.tolist()
             index = index[0]
-
-            st.write("MON INDEX : ", index)
 
             #On charge l'image en mémoire et on récupère la valeur de la boudingbox connu (y_true)
             #img_name = target_data.iloc[index,0]
