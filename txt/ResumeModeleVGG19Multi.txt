@@ -1,1 +1,6 @@
-Ce modèle fonctionne/permet ...
+Ceci est un modèle de classification multiple par réseau de neurones profond (deep learning). 
+Il est construit:
+_ on ne s'intéresse uniquement qu'à la classification de la forme,
+_ une méthode de transfert learning, en réutilisant l'approche monoforme du modèle classification simple (une architecture de type VGG19 pré-entrainée)
+adapté à une classification multi-formes permettant ainsi de prédire plusieurs formes pour une seule image. 
+L'approche est très similaire, nous nous appuyons à nouveau sur l'augmentation de données et un VGG19 préentraîné, sur lequel nous defreezons quelques couches.

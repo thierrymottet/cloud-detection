@@ -1,1 +1,6 @@
-Ce modèle fonctionne/permet ...
+Ceci est un modèle de classification simple par réseau de neurones profond (deep learning). 
+Il est construit:
+_ une méthode de transfert learning, en réutilisant une architecture de type VGG19 pré-entrainée
+_ utilise de l'augmentation de donnée
+
+La prédiction de ce modèle permet de classer les images mono-formes: elle renvoit une classe par image, pouvant prendre 4 valeurs (Fish, Flower, Gravel, Sugar).

@@ -45,7 +45,6 @@ cheminImages = "./img/"
 cheminTextes = "./txt/"
 cheminSources = "./sources/"
 cheminModeles = "./models/"
-cheminVGG16Simple = cheminModeles+"VGG16Simple/c/"
 cheminVGG19Simple = cheminModeles+"VGG19Simple/c/"
 cheminVGG19Multiple = cheminModeles+"VGG19Multiple/"
 cheminRegressionFish = cheminModeles+"Regression/Fish/"
@@ -173,10 +172,10 @@ def choixModeleML(image):
     ########################################################################################
     if(choixutilisateur==options[0]):
         Modele_TransfertLearning_VGG19Simple(im)
-        #ResumeModele(resumeVGG19Simple)
+        ResumeModele(resumeVGG19Simple)
     elif(choixutilisateur==options[1]):
         Modele_TransfertLearning_VGG19Multiple(im)
-        #ResumeModele(resumeVGG19Multi)
+        ResumeModele(resumeVGG19Multi)
     elif(choixutilisateur==options[2]):
         Modele_Regression(im, nomimage)
         #ResumeModele(resumeRegression)
@@ -693,17 +692,6 @@ def pred_bboxes(y, threshold):
             result = np.delete(result, k,0)
     return result 
 
-def compute_y_pred(imgpath, resize=(160,160)):
-    im = tf.io.read_file(imgpath)
-    im = tf.image.decode_png(im, channels=3)
-    #im_shape = tf.shape(im)
-    im = tf.image.resize(im, resize)
-    pred = model(np.array([im], dtype=np.float32))[0]
-    pred = transform_netout(pred)
-    #bboxes_pred = pred_bboxes(pred)
-    #print(bboxes_pred)
-    return pred
-
 def show_img_true(imgpath, y_true, threshold=0.5,resize=(160,160)):
     im = tf.io.read_file(imgpath)
     im = tf.image.decode_png(im, channels=3)
@@ -774,9 +762,12 @@ def Modele_YOLO(image, nomimage):
             #On réalise une prédiction sur l'image, trouver y_pred
             resize=(160,160)
 
+            #img_name="./train_images/"+img_name
+
             im = tf.io.read_file(img_name)
             im = tf.image.decode_png(im, channels=3)
             im = tf.image.resize(im, resize)
+
             pred = model(np.array([im], dtype=np.float32))[0]
             y_pred = transform_netout(pred)
 
