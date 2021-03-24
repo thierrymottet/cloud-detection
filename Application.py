@@ -751,6 +751,8 @@ def Modele_YOLO(image, nomimage):
             index = target_data[target_data['ImageId']==nomimage].index.tolist()
             index = index[0]
 
+            #st.write("INDEX!", index)
+
             #On charge l'image en mémoire et on récupère la valeur de la boudingbox connu (y_true)
             #img_name = target_data.iloc[index,0]
             img_name = nomimage
@@ -762,7 +764,7 @@ def Modele_YOLO(image, nomimage):
             #On réalise une prédiction sur l'image, trouver y_pred
             resize=(160,160)
 
-            #img_name="./train_images/"+img_name
+            img_name="./train_images/"+img_name
 
             im = tf.io.read_file(img_name)
             im = tf.image.decode_png(im, channels=3)
