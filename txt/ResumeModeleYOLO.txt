@@ -1,0 +1,12 @@
+Ceci est l'utilisation d'un modèle de type "YOLO" (Yon only look once). 
+
+Nous avons repris l'approche classique du YOLO pour à la fois détecter la présence des formes, 
+et calculer les coordonnées et tailles des bounding boxes associées.
+
+Ce modèle YOLO associe à une grille de dimension 5 x 5. 
+Le modèle est construit de manière à prédire pour chaque cellule:
+_la présence ou non d'un objet (1 variable)
+_la classe de cet objet: 4 labels sont possibles Fish, Flower, Gravel, Sugar (4 variables)
+_les dimensions de la bounding box correspondante (4 variables)
+
+Notre cible prendra donc la forme d'un tenseur de taille 25 x 9.

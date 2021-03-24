@@ -58,6 +58,7 @@ cheminImagesTest = "./testimages/"
 resumeVGG19Simple = "ResumeModeleVGG19Simple.txt"
 resumeVGG19Multi = "ResumeModeleVGG19Multi.txt"
 resumeRegression = "ResumeModeleRegression.txt"
+resumeYOLO = "ResumeModeleYOLO.txt"
 projetcontexte = "ProjectContext.txt"
 
 #CSV (récupéré des différents NoteBooks/Projet)
@@ -181,7 +182,7 @@ def choixModeleML(image):
         #ResumeModele(resumeRegression)
     elif(choixutilisateur==options[3]):
         Modele_YOLO(im, nomimage)
-        #ResumeModele(resumeRegression)
+        ResumeModele(resumeYOLO)
 
 #Fonction permettant d'afficher le resume du modèle utilisé pour la prédiction
 def ResumeModele(fichier):
