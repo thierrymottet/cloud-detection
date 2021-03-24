@@ -1,1 +1,4 @@
-Ce modèle fonctionne/permet ...
+Afin de prédire les types de forme et leur localisation sur des images, 
+ceci est une implémentation d'un modèle hybride, 
+qui combinera prédiction des classes (avec un premier modèle) 
+puis prédiction des bounding boxes associées avec un second modèle. 

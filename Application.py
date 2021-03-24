@@ -75,7 +75,7 @@ modelREGRESSION_VGG19_Fish = "modelREGRESSION_VGG19_Fish"
 modelREGRESSION_VGG19_Flower = "modelREGRESSION_VGG19_Flower"
 modelREGRESSION_VGG19_Sugar = "modelREG_VGG19_Sugar"
 modelREGRESSION_VGG19_Gravel = "modelREG_VGG19_Gravel"
-model_YOLO = "modelEfficientNet_YOLO_finalversion_V2"
+model_YOLO = "model4_YOLO"
 
 # Constantes
 img_size = 600
@@ -164,23 +164,24 @@ def choixModeleML(image):
     im=image[0]
     nomimage=image[1]
     ########################################################################################
-    options = ["1. Modèle VGG19 Simple",
-    "2. Modèle VGG19 Multiple",
-    "3. Modèle de régression (VGG19)",
-    "4. Modèle YOLO"]
+    options = [
+    #"1. Modèle VGG19 Simple",
+    "1. Modèle VGG19 Multiple",
+    "2. Modèle de régression (VGG19)",
+    "3. Modèle YOLO"]
     st.subheader("Choix du modèle")
     choixutilisateur = st.selectbox(label = "", options = options)
     ########################################################################################
+    #if(choixutilisateur==options[0]):
+    #    Modele_TransfertLearning_VGG19Simple(im)
+    #    ResumeModele(resumeVGG19Simple)
     if(choixutilisateur==options[0]):
-        Modele_TransfertLearning_VGG19Simple(im)
-        ResumeModele(resumeVGG19Simple)
-    elif(choixutilisateur==options[1]):
         Modele_TransfertLearning_VGG19Multiple(im)
         ResumeModele(resumeVGG19Multi)
-    elif(choixutilisateur==options[2]):
+    elif(choixutilisateur==options[1]):
         Modele_Regression(im, nomimage)
-        #ResumeModele(resumeRegression)
-    elif(choixutilisateur==options[3]):
+        ResumeModele(resumeRegression)
+    elif(choixutilisateur==options[2]):
         Modele_YOLO(im, nomimage)
         ResumeModele(resumeYOLO)
 
@@ -543,57 +544,6 @@ def Modele_Regression(image, nomimage):
             show_bounding_box(image, bbox)
 
 #########################################################FONCTION POUR LE YOLO#############################################################
-def convert_target(bboxes,Label, output_shape, nb_classes):
-    y_target = np.zeros([output_shape[0], output_shape[1], 1+4+nb_classes])
-    lx=1/output_shape[1]
-    ly=1/output_shape[0]
-    #print(Label)
-    # on identifie la classe parcourue
-    if Label == 'Fish':
-        c=5
-    elif Label == 'Flower':
-        c=6
-    elif Label == 'Gravel':
-        c=7
-    else:
-        c=8
-
-    x, y, w, h = bboxes
-    idx_x = int(x//lx)
-    idx_y = int(y//ly)
-    # Presence of object
-    y_target[idx_y, idx_x, 0] = 1
-    # Coordinate x
-    y_target[idx_y, idx_x, 1] = 2*(x/lx - (idx_x+0.5))
-    # Coordinate y
-    y_target[idx_y, idx_x, 2] = 2*(y/ly - (idx_y+0.5))
-    # Coordinate w
-    y_target[idx_y, idx_x, 3] = w
-    # Coordinate h
-    y_target[idx_y, idx_x, 4] = h
-    # Class of object
-    #print(c)
-    y_target[idx_y, idx_x, c] = 1
-    #print(y_target.shape)   
-    return y_target.reshape([-1, 1+4 +nb_classes])
-    #return y_target
-
-def multi_convert_target(ImageId, df):
-    #print(ImageId)
-    #print(ImageId[13:])
-    data = df[df['ImageId']==ImageId[0:]]
-    #print(data.head())
-    data['target'] = data.apply(lambda x: convert_target(x.bbox,x.Label,output_shape,4),axis = 1)
-    y_multi_target = data['target'].sum()
-    return y_multi_target
-
-def check_validity(y_target):
-    check = max(y_target[:,0])
-    if check > 1:
-        return 1
-    else:
-        return 0
-
 def transform_netout(y_pred_raw):
     y_pred_xy = (tf.nn.tanh(y_pred_raw[..., 1:3]))
     y_pred_wh = tf.sigmoid(y_pred_raw[..., 3:5])
@@ -615,22 +565,53 @@ def proccess_xy(y_true_raw):
     y_true_class = y_true_raw[..., 5:9]
     return tf.concat([y_true_conf, y_true_xy, y_true_wh,y_true_class], -1) 
 
+def pred_bboxes(y, threshold):
+    y_xy = tf.cast(y, tf.float32)
+    y_xy = tf.expand_dims(y_xy, axis=0)
+    y_xy = proccess_xy(y_xy)[0]
+    #return y_xy
+    bboxes =  sorted(y_xy.numpy(), key=lambda x: x[0], reverse=True)
+    bboxes = np.array(bboxes)
+    result = bboxes[bboxes[:,0]>threshold]
+    #print("result avant ajust:", len(result))
+    # on doit ajuster les valeurs pour assurer la présence de classes différentes
+    if len(result)== 0:
+        # dans ce cas il n'y a aucune box retenue, on doit en mettre une
+        kmax = np.argmax(bboxes[:,0]) 
+        result = bboxes[kmax,:].reshape([1,9])
+
+    # pour chaque bbox on met toutes les probas de classe à 0 sauf la plus haute
+    for k in range(len(result)):
+        imax = np.argmax(result[k,5:])
+        pmax = result[k,5+imax]
+        result[k,5:]=0
+        result[k,5+imax]=pmax
+        # ensuite, on met la  l la proba de chaque classe à 1 pour celle qui a la proba max, et 0 pour les autres
+        # pour éviter des doublons
+    for i in range(4):
+            kmax = np.argmax(result[:,5+i]*result[:,0])
+            pmax = result[kmax,5+i]
+            result[:,5+i]=0
+            if pmax > 0:
+                result[kmax,5+i]=1
+        #enfin on vire les bbox qui ne prédisent plus de classes après notre post processing
+    #print("result apres adjust", result)
+    #result_final = []
+    result_final = result[(result[:,5]+result[:,6]+result[:,7]+result[:,8])>0 ]
+    #for k in range(len(result)):
+        #print(element)
+        #if not (np.max(result[k,5:]) == 0):
+        #    result_final.append(result[k,:])
+    #print(type(result_final))
+    return result_final 
+
 @tf.function
 def load_image(filepath, resize=(320,320)):
     im = tf.io.read_file( filepath)
     im = tf.image.decode_png(im, channels=3)
     return tf.image.resize(im, resize)
 
-def show_img(img, model, threshold=0.2):
-    pred = model(np.array([img], dtype=np.float32))[0]
-    pred = transform_netout(pred)
-    #print(pred)
-
-    bboxes_pred = pred_bboxes(pred, threshold)
-    plt.imshow(X_t[0]/255)
-    for bbox in bboxes_pred:
-        bbox = bbox[1:]
-        show_bounding_box(img/255, bbox)
+#fig, ax = plt.subplots()
 
 def show_bounding_box(im, bbox, normalised=True, Color='r', Label = None):
     # Signification de bbox
@@ -652,71 +633,146 @@ def show_bounding_box(im, bbox, normalised=True, Color='r', Label = None):
     x = [x1,x2,x2,x1,x1]
     y = [y1,y1,y2,y2,y1]
 
-    fig, ax = plt.subplots()
-    im = ax.imshow(im)
-    line, = ax.plot(x, y, "r", Label = Label)
-    legend = ax.legend(title= 'Label')
+    plt.imshow(im)    
+    # Afficher la bounding box
+    plt.plot([x1,x2,x2,x1,x1],[y1,y1,y2,y2,y1],color = Color, label = Label)     
+    plt.legend()
+
+    #fig = plt.subplots()
+    #im = ax.imshow(im)
+    #line, = ax.plot(x, y, color = Color, Label = Label)
+    #legend = ax.legend(title= 'Label')
     st.pyplot()
 
-def pred_bboxes(y, threshold):
-    y_xy = tf.cast(y, tf.float32)
-    y_xy = tf.expand_dims(y_xy, axis=0)
-    y_xy = proccess_xy(y_xy)[0]
-    #return y_xy
-    bboxes =  sorted(y_xy.numpy(), key=lambda x: x[0], reverse=True)
-    bboxes = np.array(bboxes)
-    result = bboxes[bboxes[:,0]>threshold]
-    # on doit ajuster les valeurs pour assurer la présence de classes différentes
-    if len(result)== 0:
-        # dans ce cas il n'y a aucune box retenue, on doit en mettre une
-        kmax = np.argmax(bboxes[:,0]) 
-        result = bboxes[kmax,:].reshape([1,9])
-    #else:
-    # pour chaque bbox on met toutes les probas de classe à 0 sauf la plus haute
-    for k in range(len(result)):
-        imax = np.argmax(result[k,5:])
-        pmax = result[k,5+imax]
-        result[k,5:]=0
-        result[k,5+imax]=pmax
-        # ensuite, on met la  l la proba de chaque classe à 1 pour celle qui a la proba max, et 0 pour les autres
-        # pour éviter des doublons
-    for i in range(4):
-            kmax = np.argmax(result[:,5+i]*result[:,0])
-            pmax = result[kmax,5+i]
-            result[:,5+i]=0
-            if pmax > 0:
-                result[kmax,5+i]=1
-        #enfin on vire les bbox qui ne prédisent plus de classes après notre post processing
-    for k in range(len(result)):
-        #print(element)
-        if np.max(result[k,5:]) == 0:
-            result = np.delete(result, k,0)
-    return result 
+# methode renvoyant pour une image donnée (argument path) le vecteur prédit par notre modèle
+def compute_y_pred(imgpath,model, resize=(320,320)):
+    im = tf.io.read_file(imgpath)
+    im = tf.image.decode_png(im, channels=3)
+    #     im_shape = tf.shape(im)
+    im = tf.image.resize(im, resize)
+    pred = model(np.array([im], dtype=np.float32))[0]
+    pred = transform_netout(pred)
+    #bboxes_pred = pred_bboxes(pred)
+    #print(bboxes_pred)
+    return pred
 
-def show_img_true(imgpath, y_true, threshold=0.5,resize=(160,160)):
+# Visualisation à partir du path de l'image et du tenseur prédit (ou cible) passé en argument
+def show_img_from_tensor(imgpath, pred, threshold=0.4,resize=(320,320)):
     im = tf.io.read_file(imgpath)
     im = tf.image.decode_png(im, channels=3)
     #im_shape = tf.shape(im)
     im = tf.image.resize(im, resize)
-    pred = y_true
-    bboxes_pred = pred_bboxes(pred, threshold)
-    #print(bboxes_pred)
-    #plt.imshow(im/255)
-    for bbox in bboxes_pred:
-        if bbox[5] == 1:
+    bboxes = pred_bboxes(pred, threshold)
+    #print(bboxes)
+    bboxes = np.matrix(bboxes)
+    #print(bboxes)
+    plt.imshow(im/255)
+    for i in range(bboxes.shape[0]):       
+        if bboxes[i,5] == 1:
             col = 'r'
             lab = 'Fish'
-        if bbox[6] == 1:
+        if bboxes[i,6] == 1:
             col = 'b'
             lab = 'Flower'
-        if bbox[7] == 1:
+        if bboxes[i,7] == 1:
             col = 'g'
             lab = 'Gravel'
-        if bbox[8] == 1:
+        if bboxes[i,8] == 1:
             col = 'y'
             lab = 'Sugar'
-        bbox = bbox[1:5]
+        bbox = bboxes[i,1], bboxes[i,2], bboxes[i,3], bboxes[i,4] 
         show_bounding_box(im/255, bbox, Color = col,Label = lab)
+
+# Visualisation à partir du path de l'image et des bboxes directement passées en argument
+def show_img_from_bboxes(imgpath, bboxes,resize=(320,320)):
+    im = tf.io.read_file(imgpath)
+    im = tf.image.decode_png(im, channels=3)
+    #im_shape = tf.shape(im)
+    im = tf.image.resize(im, resize)
+    plt.imshow(im/255)
+    for i in range(bboxes.shape[0]):       
+        if bboxes[i,5] == 1:
+            col = 'r'
+            lab = 'Fish'
+        if bboxes[i,6] == 1:
+            col = 'b'
+            lab = 'Flower'
+        if bboxes[i,7] == 1:
+            col = 'g'
+            lab = 'Gravel'
+        if bboxes[i,8] == 1:
+            col = 'y'
+            lab = 'Sugar'
+        bbox = bboxes[i,1], bboxes[i,2], bboxes[i,3], bboxes[i,4] 
+        #bbox = bbox.reshape((1,4))
+        #print(bbox)
+        show_bounding_box(im/255, bbox, Color = col,Label = lab)
+
+def compare_predictions_multi(df,model):
+
+    '''
+    Methode qui reçoit en argument 
+    2)un dataframe contenant 
+        dans la premiere colonne le path d'une image 
+        dans sa deuxième colonne les vecteurs decrivant les bounding boxes exactes (entre 1 et 4 vecteurs à 9 variables)
+    3) un modele
+    la methode choisit 4affiche les boîtes exactes avec leurs labels, ainsi que les boîtes prédites
+    '''
+    #bbox = []
+    plt.figure(figsize = (20,10))
+    for j, index in enumerate(np.random.randint(0, df.shape[0], [4])):        
+        #image choisie au hasard
+        img_name = df.iloc[index,1]
+        # on recupere dans les données chargées les bounding boxes attendues
+        bboxform = df.iloc[index,2]
+        bboxform = np.matrix(bboxform)
+        size = int(bboxform.shape[1]/9)
+        bboxform = bboxform.reshape((size,9))
+        #bbox.append(bboxform)        
+        plt.subplot(2,4,2*j+1)
+        # on affiche les bounding boxes attendues
+        title = 'TRUE - ' + img_name[12:]
+        plt.title(title)
+        show_img_from_bboxes(img_name, bboxform)
+        # on prédit les bounding boxes avec notre modele
+        y_pred = compute_y_pred(img_name,model)#print(y_pred)
+        plt.subplot(2,4,2*j+2)
+        title = 'PREDICTED - ' + img_name[12:]
+        plt.title(title)
+        show_img_from_tensor(img_name,y_pred,threshold = 0.3)
+
+def compare_prediction_mono(index, df_test, model):
+    '''
+    Methode qui reçoit en argument 
+    1) un indice
+    2)un dataframe contenant 
+        dans la premiere colonne le path d'une image 
+        dans sa deuxième colonne les vecteurs decrivant les bounding boxes exactes (entre 1 et 4 vecteurs à 9 variables)
+    3) un modele
+    la methode affiche les boîtes exactes avec leurs labels, ainsi que les boîtes prédites
+    '''
+    # on identifie l'image et on recupere les bboxes correspondantes
+    img_name = df_test.iloc[index,1]
+    img = load_image(img_name)
+    # on remet en forme les bboxes cibles
+    bbox_true = df_test.iloc[index,2]
+    bbox_true = np.matrix(bbox_true)
+    size = int(bbox_true.shape[1]/9)
+    bbox_true = bbox_true.reshape((size,9))
+    plt.figure(figsize = (12,6))
+    # on visualise les bboxes cibles
+    plt.subplot(1,2,1)
+    title = "TRUE - " + img_name
+    show_img_from_bboxes(img_name, bbox_true)
+    plt.title(title)
+    # on predit le tenseur cible
+    y_pred = compute_y_pred(img_name,model)
+    plt.subplot(1,2,2)
+    title = "PREDICT - " + img_name
+    # on visualise les bboxes predites correspondantes
+    show_img_from_tensor(img_name,y_pred,threshold = 0.3)
+    plt.title(title)
+    plt.show()
 
 def getdfYOLO():
     file=cheminSources+dftargetdata
@@ -727,55 +783,10 @@ def getdfYOLO():
 
 #Fonction permettant de faire une prediction sur l'emplacement de la forme sur l'image + classe de la forme -> YOLO
 def Modele_YOLO(image, nomimage):
-
-    if(image != ""):
-
-        #Chargement des poids de modèle YOLO
-        model = loadmodel(cheminYolo, model_YOLO)
-
-        #Chargement du CSV converti en tensors
-        target_data=getdfYOLO()
-
-        #Variable permettant de vérifier si l'image chargée est connue du dataframe
-        vare=""
-        
-        i=0
-        for nomfichier in target_data.ImageId:
-            if (nomfichier == nomimage):
-                vare="BON"
-                e=i
-            i=i+1
-
-        #Si l'image est connue, on lance la prédiction avec le modèle YOLO
-        if(vare=="BON"):
-            #On recherche l'indice d'après le nom de l'image
-            index = target_data[target_data['ImageId']==nomimage].index.tolist()
-            index = index[0]
-
-            #st.write("INDEX!", index)
-
-            #On charge l'image en mémoire et on récupère la valeur de la boudingbox connu (y_true)
-            #img_name = target_data.iloc[index,0]
-            img_name = nomimage
-            #img = load_image(img_name)
-            y_true = target_data.iloc[index,1]
-
-            st.write(y_true)
-
-            #On réalise une prédiction sur l'image, trouver y_pred
-            resize=(160,160)
-
-            img_name="./train_images/"+img_name
-
-            im = tf.io.read_file(img_name)
-            im = tf.image.decode_png(im, channels=3)
-            im = tf.image.resize(im, resize)
-
-            pred = model(np.array([im], dtype=np.float32))[0]
-            y_pred = transform_netout(pred)
-
-            #On affiche à l'écran le résultat : boudingbox prédite + classe de la forme
-            show_img_true(img_name,y_pred,threshold = 0.45)
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    df_test=getdfYOLO()
+    model = loadmodel(cheminYolo, model_YOLO)
+    compare_predictions_multi(df_test,model)
 
 #Fonction principal pour la partie détection d'une forme sur une image
 def cloudDetection():
