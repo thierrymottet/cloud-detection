@@ -166,22 +166,22 @@ def choixModeleML(image):
     ########################################################################################
     options = [
     #"1. Modèle VGG19 Simple",
-    "1. Modèle VGG19 Multiple",
-    "2. Modèle de régression (VGG19)",
-    "3. Modèle YOLO"]
+    #"1. Modèle VGG19 Multiple",
+    "1. Classification VGG19 + régression",
+    "2. Modèle YOLO"]
     st.subheader("Choix du modèle")
     choixutilisateur = st.selectbox(label = "", options = options)
     ########################################################################################
     #if(choixutilisateur==options[0]):
     #    Modele_TransfertLearning_VGG19Simple(im)
     #    ResumeModele(resumeVGG19Simple)
+    #if(choixutilisateur==options[0]):
+    #    Modele_TransfertLearning_VGG19Multiple(im)
+    #    ResumeModele(resumeVGG19Multi)
     if(choixutilisateur==options[0]):
-        Modele_TransfertLearning_VGG19Multiple(im)
-        ResumeModele(resumeVGG19Multi)
-    elif(choixutilisateur==options[1]):
         Modele_Regression(im, nomimage)
         ResumeModele(resumeRegression)
-    elif(choixutilisateur==options[2]):
+    elif(choixutilisateur==options[1]):
         Modele_YOLO(im, nomimage)
         ResumeModele(resumeYOLO)
 
@@ -197,21 +197,34 @@ def Exploration_formes():
     
     df_count=cheminSources+dfcount
     df_corr=cheminSources+dfcorr
+    dft = cheminSources+dftrain
 
     st.set_option('deprecation.showPyplotGlobalUse', False)
 
     st.title("Exploration\n")
-
     st.subheader("Répartition des différentes formes\n")
-    st.image(cheminImages+'stat/nbImages.jpg',use_column_width=True)
-    st.write("Ci-dessous la distribution du nombre de formes par image\n")
-
+    st.write('\n')
+    
+    dft = load_data(dft)
+    nb_fish = dft[(dft['Label'] == 'Fish') & (dft['nb_pixels'] != 0)].Label.count()
+    st.write('Nombre d images contenant la forme Fish: ', nb_fish)
+    nb_flower = dft[(dft['Label'] == 'Flower') & (dft['nb_pixels'] != 0)].Label.count()
+    st.write('Nombre d images contenant la forme Flower: ', nb_flower)
+    nb_gravel = dft[(dft['Label'] == 'Gravel') & (dft['nb_pixels'] != 0)].Label.count()
+    st.write('Nombre d images contenant la forme Gravel: ', nb_gravel)
+    nb_sugar = dft[(dft['Label'] == 'Sugar') & (dft['nb_pixels'] != 0)].Label.count()
+    st.write('Nombre d images contenant la forme Sugar: ', nb_sugar)
     filea=df_count
     df_count = load_data(filea)
-    sns.countplot(x ='nb_formes', data = df_count)
+    st.write('Nombre total d images : ', pd.DataFrame(df_count.groupby('ImageId')).shape[0])
+    df_count = df_count.rename(columns = {'nb_formes':'Nombre de formes'})
+    
+    st.subheader("Ci-dessous la distribution du nombre de formes par image\n")
+    sns.countplot(x ='Nombre de formes', data = df_count).set_title("Nombre d'images par nombre de formes qu'elles contiennent")
     st.pyplot()
-    st.write('nombre moyen de formes par images:' , df_count.nb_formes.mean())
-    st.write('nombre d images contenant les 4 formes: ', df_count[df_count.nb_formes == 4].count()[0])
+    df_count = df_count.rename(columns = {'Nombre de formes' : 'nb_formes'})
+    st.write('Nombre moyen de formes par images:' , round(df_count.nb_formes.mean(),2))
+    st.write("Nombre d'images contenant les 4 formes: ", round(df_count[df_count.nb_formes == 4].count()[0],2))
 
     st.subheader("Catégorisation exacte des labels de formes\n")
     st.write("Dataframe présentant le nombre de forme par image et les couples présent sur une image : ")
@@ -611,39 +624,6 @@ def load_image(filepath, resize=(320,320)):
     im = tf.image.decode_png(im, channels=3)
     return tf.image.resize(im, resize)
 
-#fig, ax = plt.subplots()
-
-def show_bounding_box(im, bbox, normalised=True, Color='r', Label = None):
-    # Signification de bbox
-    x, y, w, h = bbox
-    # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
-    x1=x-w/2
-    x2=x+w/2
-    y1=y-h/2
-    y2=y+h/2
-    
-    # redimensionner en cas de normalisation
-    if normalised:
-        x1=x1*im.shape[1]
-        x2=x2*im.shape[1]
-        y1=y1*im.shape[0]
-        y2=y2*im.shape[0]
-    
-    # Afficher l'image avec la bouding box    
-    x = [x1,x2,x2,x1,x1]
-    y = [y1,y1,y2,y2,y1]
-
-    plt.imshow(im)    
-    # Afficher la bounding box
-    plt.plot([x1,x2,x2,x1,x1],[y1,y1,y2,y2,y1],color = Color, label = Label)     
-    plt.legend()
-
-    #fig = plt.subplots()
-    #im = ax.imshow(im)
-    #line, = ax.plot(x, y, color = Color, Label = Label)
-    #legend = ax.legend(title= 'Label')
-    st.pyplot()
-
 # methode renvoyant pour une image donnée (argument path) le vecteur prédit par notre modèle
 def compute_y_pred(imgpath,model, resize=(320,320)):
     im = tf.io.read_file(imgpath)
@@ -656,17 +636,8 @@ def compute_y_pred(imgpath,model, resize=(320,320)):
     #print(bboxes_pred)
     return pred
 
-# Visualisation à partir du path de l'image et du tenseur prédit (ou cible) passé en argument
-def show_img_from_tensor(imgpath, pred, threshold=0.4,resize=(320,320)):
-    im = tf.io.read_file(imgpath)
-    im = tf.image.decode_png(im, channels=3)
-    #im_shape = tf.shape(im)
-    im = tf.image.resize(im, resize)
-    bboxes = pred_bboxes(pred, threshold)
-    #print(bboxes)
-    bboxes = np.matrix(bboxes)
-    #print(bboxes)
-    plt.imshow(im/255)
+# Retourner la couleur et le label de l'image
+def show_img_from_bboxes(imgpath, bboxes ,resize=(320,320)):
     for i in range(bboxes.shape[0]):       
         if bboxes[i,5] == 1:
             col = 'r'
@@ -680,33 +651,7 @@ def show_img_from_tensor(imgpath, pred, threshold=0.4,resize=(320,320)):
         if bboxes[i,8] == 1:
             col = 'y'
             lab = 'Sugar'
-        bbox = bboxes[i,1], bboxes[i,2], bboxes[i,3], bboxes[i,4] 
-        show_bounding_box(im/255, bbox, Color = col,Label = lab)
-
-# Visualisation à partir du path de l'image et des bboxes directement passées en argument
-def show_img_from_bboxes(imgpath, bboxes,resize=(320,320)):
-    im = tf.io.read_file(imgpath)
-    im = tf.image.decode_png(im, channels=3)
-    #im_shape = tf.shape(im)
-    im = tf.image.resize(im, resize)
-    plt.imshow(im/255)
-    for i in range(bboxes.shape[0]):       
-        if bboxes[i,5] == 1:
-            col = 'r'
-            lab = 'Fish'
-        if bboxes[i,6] == 1:
-            col = 'b'
-            lab = 'Flower'
-        if bboxes[i,7] == 1:
-            col = 'g'
-            lab = 'Gravel'
-        if bboxes[i,8] == 1:
-            col = 'y'
-            lab = 'Sugar'
-        bbox = bboxes[i,1], bboxes[i,2], bboxes[i,3], bboxes[i,4] 
-        #bbox = bbox.reshape((1,4))
-        #print(bbox)
-        show_bounding_box(im/255, bbox, Color = col,Label = lab)
+    return col, lab
 
 def compare_predictions_multi(df,model):
 
@@ -728,51 +673,862 @@ def compare_predictions_multi(df,model):
         bboxform = np.matrix(bboxform)
         size = int(bboxform.shape[1]/9)
         bboxform = bboxform.reshape((size,9))
-        #bbox.append(bboxform)        
-        plt.subplot(2,4,2*j+1)
-        # on affiche les bounding boxes attendues
-        title = 'TRUE - ' + img_name[12:]
-        plt.title(title)
-        show_img_from_bboxes(img_name, bboxform)
-        # on prédit les bounding boxes avec notre modele
-        y_pred = compute_y_pred(img_name,model)#print(y_pred)
-        plt.subplot(2,4,2*j+2)
-        title = 'PREDICTED - ' + img_name[12:]
-        plt.title(title)
-        show_img_from_tensor(img_name,y_pred,threshold = 0.3)
 
-def compare_prediction_mono(index, df_test, model):
-    '''
-    Methode qui reçoit en argument 
-    1) un indice
-    2)un dataframe contenant 
-        dans la premiere colonne le path d'une image 
-        dans sa deuxième colonne les vecteurs decrivant les bounding boxes exactes (entre 1 et 4 vecteurs à 9 variables)
-    3) un modele
-    la methode affiche les boîtes exactes avec leurs labels, ainsi que les boîtes prédites
-    '''
-    # on identifie l'image et on recupere les bboxes correspondantes
-    img_name = df_test.iloc[index,1]
-    img = load_image(img_name)
-    # on remet en forme les bboxes cibles
-    bbox_true = df_test.iloc[index,2]
-    bbox_true = np.matrix(bbox_true)
-    size = int(bbox_true.shape[1]/9)
-    bbox_true = bbox_true.reshape((size,9))
-    plt.figure(figsize = (12,6))
-    # on visualise les bboxes cibles
-    plt.subplot(1,2,1)
-    title = "TRUE - " + img_name
-    show_img_from_bboxes(img_name, bbox_true)
-    plt.title(title)
-    # on predit le tenseur cible
-    y_pred = compute_y_pred(img_name,model)
-    plt.subplot(1,2,2)
-    title = "PREDICT - " + img_name
-    # on visualise les bboxes predites correspondantes
-    show_img_from_tensor(img_name,y_pred,threshold = 0.3)
-    plt.title(title)
-    plt.show()
+        normalised=True
+
+    ###################################################################################################################################################
+
+        im = tf.io.read_file(img_name)
+        im = tf.image.decode_png(im, channels=3)
+        #im_shape = tf.shape(im)
+
+        if(size==1):
+            bboxform1=bboxform[0]
+
+            x11=bboxform1[0, 1]
+            y11=bboxform1[0, 2]
+            w11=bboxform1[0, 3]
+            h11=bboxform1[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxform1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+
+            Color=couleur1
+            Label=label1
+
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*im.shape[1]
+                x2=x2*im.shape[1]
+                y1=y1*im.shape[0]
+                y2=y2*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            x = [x1,x2,x2,x1,x1]
+            y = [y1,y1,y2,y2,y1]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(im)
+            title = 'TRUE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(x, y, color = Color, Label = Label)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(size==2):
+            bboxform1=bboxform[0]
+            bboxform2=bboxform[1]
+
+            #VALEUR N°1
+            x11=bboxform1[0, 1]
+            y11=bboxform1[0, 2]
+            w11=bboxform1[0, 3]
+            h11=bboxform1[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxform1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+
+            #VALEUR N°2
+            x22=bboxform2[0, 1]
+            y22=bboxform2[0, 2]
+            w22=bboxform2[0, 3]
+            h22=bboxform2[0, 4]
+
+            retour2=show_img_from_bboxes(img_name, bboxform2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+
+            #Recuperation des couleurs
+            Color1=couleur1
+            Label1=label1
+            Color2=couleur2
+            Label2=label2
+
+            #*******************************sous partie 1*************************************
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*im.shape[1]
+                x2=x2*im.shape[1]
+                y1=y1*im.shape[0]
+                y2=y2*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            #*******************************sous partie 2*************************************
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1b=xb-wb/2
+            x2b=xb+wb/2
+            y1b=yb-hb/2
+            y2b=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=x1b*im.shape[1]
+                x2b=x2b*im.shape[1]
+                y1b=y1b*im.shape[0]
+                y2b=y2b*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(im)
+            title = 'TRUE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color1, Label = Label1)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(size==3):
+            bboxform1=bboxform[0]
+            bboxform2=bboxform[1]
+            bboxform3=bboxform[2]
+
+            #VALEUR N°1
+            x11=bboxform1[0, 1]
+            y11=bboxform1[0, 2]
+            w11=bboxform1[0, 3]
+            h11=bboxform1[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxform1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+
+            #VALEUR N°2
+            x22=bboxform2[0, 1]
+            y22=bboxform2[0, 2]
+            w22=bboxform2[0, 3]
+            h22=bboxform2[0, 4]
+
+            retour2=show_img_from_bboxes(img_name, bboxform2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+
+            #VALEUR N°3
+            x33=bboxform3[0, 1]
+            y33=bboxform3[0, 2]
+            w33=bboxform3[0, 3]
+            h33=bboxform3[0, 4]
+
+            retour3=show_img_from_bboxes(img_name, bboxform3)
+            couleur3=retour3[0]
+            label3=retour3[1]
+
+            #Recuperation des couleurs
+            Color1=couleur1
+            Label1=label1
+            Color2=couleur2
+            Label2=label2
+            Color3=couleur3
+            Label3=label3
+
+            #*******************************sous partie 1*************************************
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*im.shape[1]
+                x2=x2*im.shape[1]
+                y1=y1*im.shape[0]
+                y2=y2*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            #*******************************sous partie 2*************************************
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1b=xb-wb/2
+            x2b=xb+wb/2
+            y1b=yb-hb/2
+            y2b=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=x1b*im.shape[1]
+                x2b=x2b*im.shape[1]
+                y1b=y1b*im.shape[0]
+                y2b=y2b*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+
+            #*******************************sous partie 3*************************************
+            # Signification de bbox
+            xc = x33
+            yc = y33 
+            wc = w33
+            hc = h33
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1c=xc-wc/2
+            x2c=xc+wc/2
+            y1c=yc-hc/2
+            y2c=yc+hc/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1c=x1c*im.shape[1]
+                x2c=x2c*im.shape[1]
+                y1c=y1c*im.shape[0]
+                y2c=y2c*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xc = [x1c,x2c,x2c,x1c,x1c]
+            yc = [y1c,y1c,y2c,y2c,y1c]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(im)
+            title = 'TRUE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color1, Label = Label1)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            line3, = ax.plot(xc, yc, color = Color3, Label = Label3)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(size==4):
+            bboxform1=bboxform[0]
+            bboxform2=bboxform[1]
+            bboxform3=bboxform[2]
+            bboxform4=bboxform[3]
+
+            #VALEUR N°1
+            x11=bboxform1[0, 1]
+            y11=bboxform1[0, 2]
+            w11=bboxform1[0, 3]
+            h11=bboxform1[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxform1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+
+            #VALEUR N°2
+            x22=bboxform2[0, 1]
+            y22=bboxform2[0, 2]
+            w22=bboxform2[0, 3]
+            h22=bboxform2[0, 4]
+
+            retour2=show_img_from_bboxes(img_name, bboxform2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+
+            #VALEUR N°3
+            x33=bboxform3[0, 1]
+            y33=bboxform3[0, 2]
+            w33=bboxform3[0, 3]
+            h33=bboxform3[0, 4]
+
+            retour3=show_img_from_bboxes(img_name, bboxform3)
+            couleur3=retour3[0]
+            label3=retour3[1]
+
+            #VALEUR N°4
+            x44=bboxform4[0, 1]
+            y44=bboxform4[0, 2]
+            w44=bboxform4[0, 3]
+            h44=bboxform4[0, 4]
+
+            retour4=show_img_from_bboxes(img_name, bboxform4)
+            couleur4=retour4[0]
+            label4=retour4[1]
+
+            #Recuperation des couleurs
+            Color1=couleur1
+            Label1=label1
+            Color2=couleur2
+            Label2=label2
+            Color3=couleur3
+            Label3=label3
+            Color4=couleur4
+            Label4=label4
+
+            #*******************************sous partie 1*************************************
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*im.shape[1]
+                x2=x2*im.shape[1]
+                y1=y1*im.shape[0]
+                y2=y2*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            #*******************************sous partie 2*************************************
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1b=xb-wb/2
+            x2b=xb+wb/2
+            y1b=yb-hb/2
+            y2b=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=x1b*im.shape[1]
+                x2b=x2b*im.shape[1]
+                y1b=y1b*im.shape[0]
+                y2b=y2b*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+
+            #*******************************sous partie 3*************************************
+            # Signification de bbox
+            xc = x33
+            yc = y33 
+            wc = w33
+            hc = h33
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1c=xc-wc/2
+            x2c=xc+wc/2
+            y1c=yc-hc/2
+            y2c=yc+hc/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1c=x1c*im.shape[1]
+                x2c=x2c*im.shape[1]
+                y1c=y1c*im.shape[0]
+                y2c=y2c*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xc = [x1c,x2c,x2c,x1c,x1c]
+            yc = [y1c,y1c,y2c,y2c,y1c]
+
+            #*******************************sous partie 4*************************************
+            # Signification de bbox
+            xd = x44
+            yd = y44 
+            wd = w44
+            hd = h44
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1d=xd-wd/2
+            x2d=xd+wd/2
+            y1d=yd-hd/2
+            y2d=yd+hd/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1d=x1d*im.shape[1]
+                x2d=x2d*im.shape[1]
+                y1d=y1d*im.shape[0]
+                y2d=y2d*im.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xd = [x1d,x2d,x2d,x1d,x1d]
+            yd = [y1d,y1d,y2d,y2d,y1d]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            title = 'TRUE - ' + img_name[12:]
+            plt.title(title)
+            im = ax.imshow(im)
+            line, = ax.plot(xa, ya, color = Color1, Label = Label1)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            line3, = ax.plot(xc, yc, color = Color3, Label = Label3)
+            line4, = ax.plot(xd, yd, color = Color4, Label = Label4)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+    ###################################################################################################################################################
+    
+        y_pred = compute_y_pred(img_name,model)
+        bboxpredites = pred_bboxes(y_pred, threshold = 0.3)
+        bboxpredites = np.matrix(bboxpredites)
+        sizepred = len(bboxpredites)
+        normalised=True
+
+        imp = tf.io.read_file(img_name)
+        imp = tf.image.decode_png(imp, channels=3)
+
+        if(sizepred==1):
+            bboxpredites1=bboxpredites[0]
+
+            x11=bboxpredites1[0, 1]
+            y11=bboxpredites1[0, 2]
+            w11=bboxpredites1[0, 3]
+            h11=bboxpredites1[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxpredites1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+
+            Color=couleur1
+            Label=label1
+
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*imp.shape[1]
+                x2=x2*imp.shape[1]
+                y1=y1*imp.shape[0]
+                y2=y2*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(imp)
+            title = 'PREDITE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color, Label = Label)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(sizepred==2):
+            bboxpredites1=bboxpredites[0]
+            bboxpredites2=bboxpredites[1]
+
+            x11=bboxpredites1[0, 1]
+            y11=bboxpredites1[0, 2]
+            w11=bboxpredites1[0, 3]
+            h11=bboxpredites1[0, 4]
+            
+            x22=bboxpredites2[0, 1]
+            y22=bboxpredites2[0, 2]
+            w22=bboxpredites2[0, 3]
+            h22=bboxpredites2[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxpredites1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+            Color=couleur1
+            Label=label1
+
+            retour2=show_img_from_bboxes(img_name, bboxpredites2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+            Color2=couleur2
+            Label2=label2
+
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*imp.shape[1]
+                x2=x2*imp.shape[1]
+                y1=y1*imp.shape[0]
+                y2=y2*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xb=xb-wb/2
+            xb=xb+wb/2
+            yb=yb-hb/2
+            yb=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=xb*imp.shape[1]
+                x2b=xb*imp.shape[1]
+                y1b=yb*imp.shape[0]
+                y2b=yb*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(imp)
+            title = 'PREDITE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color, Label = Label)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(sizepred==3):
+            bboxpredites1=bboxpredites[0]
+            bboxpredites2=bboxpredites[1]
+            bboxpredites3=bboxpredites[2]
+
+            x11=bboxpredites1[0, 1]
+            y11=bboxpredites1[0, 2]
+            w11=bboxpredites1[0, 3]
+            h11=bboxpredites1[0, 4]
+            
+            x22=bboxpredites2[0, 1]
+            y22=bboxpredites2[0, 2]
+            w22=bboxpredites2[0, 3]
+            h22=bboxpredites2[0, 4]
+
+            x33=bboxpredites3[0, 1]
+            y33=bboxpredites3[0, 2]
+            w33=bboxpredites3[0, 3]
+            h33=bboxpredites3[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxpredites1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+            Color=couleur1
+            Label=label1
+
+            retour2=show_img_from_bboxes(img_name, bboxpredites2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+            Color2=couleur2
+            Label2=label2
+
+            retour3=show_img_from_bboxes(img_name, bboxpredites3)
+            couleur3=retour3[0]
+            label3=retour3[1]
+            Color3=couleur3
+            Label3=label3
+
+            ##########Partie a#############################################################
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*imp.shape[1]
+                x2=x2*imp.shape[1]
+                y1=y1*imp.shape[0]
+                y2=y2*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            ##########Partie b#############################################################
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xb=xb-wb/2
+            xb=xb+wb/2
+            yb=yb-hb/2
+            yb=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=xb*imp.shape[1]
+                x2b=xb*imp.shape[1]
+                y1b=yb*imp.shape[0]
+                y2b=yb*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+            ##########Partie c#############################################################
+            # Signification de bbox
+            xc = x33
+            yc = y33 
+            wc = w33
+            hc = h33
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xc=xc-wc/2
+            xc=xc+wc/2
+            yc=yc-hc/2
+            yc=yc+hc/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1c=xc*imp.shape[1]
+                x2c=xc*imp.shape[1]
+                y1c=yc*imp.shape[0]
+                y2c=yc*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xc = [x1c,x2c,x2c,x1c,x1c]
+            yc = [y1c,y1c,y2c,y2c,y1c]
+
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(imp)
+            title = 'PREDITE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color, Label = Label)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            line3, = ax.plot(xc, yc, color = Color3, Label = Label3)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
+
+        elif(sizepred==4):
+            bboxpredites1=bboxpredites[0]
+            bboxpredites2=bboxpredites[1]
+            bboxpredites3=bboxpredites[2]
+            bboxpredites4=bboxpredites[3]
+
+            x11=bboxpredites1[0, 1]
+            y11=bboxpredites1[0, 2]
+            w11=bboxpredites1[0, 3]
+            h11=bboxpredites1[0, 4]
+            
+            x22=bboxpredites2[0, 1]
+            y22=bboxpredites2[0, 2]
+            w22=bboxpredites2[0, 3]
+            h22=bboxpredites2[0, 4]
+
+            x33=bboxpredites3[0, 1]
+            y33=bboxpredites3[0, 2]
+            w33=bboxpredites3[0, 3]
+            h33=bboxpredites3[0, 4]
+
+            x44=bboxpredites4[0, 1]
+            y44=bboxpredites4[0, 2]
+            w44=bboxpredites4[0, 3]
+            h44=bboxpredites4[0, 4]
+
+            retour1=show_img_from_bboxes(img_name, bboxpredites1)
+            couleur1=retour1[0]
+            label1=retour1[1]
+            Color=couleur1
+            Label=label1
+
+            retour2=show_img_from_bboxes(img_name, bboxpredites2)
+            couleur2=retour2[0]
+            label2=retour2[1]
+            Color2=couleur2
+            Label2=label2
+
+            retour3=show_img_from_bboxes(img_name, bboxpredites3)
+            couleur3=retour3[0]
+            label3=retour3[1]
+            Color3=couleur3
+            Label3=label3
+
+            retour4=show_img_from_bboxes(img_name, bboxpredites4)
+            couleur4=retour4[0]
+            label4=retour4[1]
+            Color4=couleur4
+            Label4=label4
+
+            ##########Partie a#############################################################
+            # Signification de bbox
+            x = x11
+            y = y11 
+            w = w11
+            h = h11
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            x1=x-w/2
+            x2=x+w/2
+            y1=y-h/2
+            y2=y+h/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1=x1*imp.shape[1]
+                x2=x2*imp.shape[1]
+                y1=y1*imp.shape[0]
+                y2=y2*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xa = [x1,x2,x2,x1,x1]
+            ya = [y1,y1,y2,y2,y1]
+
+            ##########Partie b#############################################################
+            # Signification de bbox
+            xb = x22
+            yb = y22 
+            wb = w22
+            hb = h22
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xb=xb-wb/2
+            xb=xb+wb/2
+            yb=yb-hb/2
+            yb=yb+hb/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1b=xb*imp.shape[1]
+                x2b=xb*imp.shape[1]
+                y1b=yb*imp.shape[0]
+                y2b=yb*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xb = [x1b,x2b,x2b,x1b,x1b]
+            yb = [y1b,y1b,y2b,y2b,y1b]
+
+            ##########Partie c#############################################################
+            # Signification de bbox
+            xc = x33
+            yc = y33 
+            wc = w33
+            hc = h33
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xc=xc-wc/2
+            xc=xc+wc/2
+            yc=yc-hc/2
+            yc=yc+hc/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1c=xc*imp.shape[1]
+                x2c=xc*imp.shape[1]
+                y1c=yc*imp.shape[0]
+                y2c=yc*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xc = [x1c,x2c,x2c,x1c,x1c]
+            yc = [y1c,y1c,y2c,y2c,y1c]
+
+
+            ##########Partie d#############################################################
+            # Signification de bbox
+            xd = x44
+            yd = y44 
+            wd = w44
+            hd = h44
+
+            # Convertir les cordonées (x,y,w,h) en (x1,x2,y1,y2)
+            xd=xd-wd/2
+            xd=xd+wd/2
+            yd=yd-hd/2
+            yd=yd+hd/2
+            
+            # redimensionner en cas de normalisation
+            if normalised:
+                x1d=xd*imp.shape[1]
+                x2d=xd*imp.shape[1]
+                y1d=yd*imp.shape[0]
+                y2d=yd*imp.shape[0]
+            
+            # Afficher l'image avec la bouding box    
+            xd = [x1d,x2d,x2d,x1d,x1d]
+            yd = [y1d,y1d,y2d,y2d,y1d]
+
+            #Affichage à l'écran
+            fig, ax = plt.subplots()
+            im = ax.imshow(imp)
+            title = 'PREDITE - ' + img_name[12:]
+            plt.title(title)
+            line, = ax.plot(xa, ya, color = Color, Label = Label)
+            line2, = ax.plot(xb, yb, color = Color2, Label = Label2)
+            line3, = ax.plot(xc, yc, color = Color3, Label = Label3)
+            line4, = ax.plot(xd, yd, color = Color4, Label = Label4)
+            legend = ax.legend(title= 'Label')
+            st.pyplot()
 
 def getdfYOLO():
     file=cheminSources+dftargetdata
