@@ -1,4 +1,3 @@
-Afin de prédire les types de forme et leur localisation sur des images, 
-ceci est une implémentation d'un modèle hybride, 
-qui combinera prédiction des classes (avec un premier modèle) 
-puis prédiction des bounding boxes associées avec un second modèle. 
+Ce modèle marche en 2 temps : 
+ - détection multi-labels, via une architecture VGG19 pré-entraînée suivie de quelques couches "full connected",
+ - pour chaque label détecté, utilisation de l'algorithme de régression adapté (toujours via un réseau de neurones).

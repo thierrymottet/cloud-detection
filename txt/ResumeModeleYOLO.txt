@@ -1,12 +1,10 @@
-Ceci est l'utilisation d'un modèle de type "YOLO" (Yon only look once). 
+Le modèle utilisé est de type "YOLO" (v1).
+Le réseau de convolution associé est un EfficientNet B0 pré-entraîné. 
+La grille utilisée est de dimension 5 x 5.
 
-Nous avons repris l'approche classique du YOLO pour à la fois détecter la présence des formes, 
-et calculer les coordonnées et tailles des bounding boxes associées.
+Le modèle est construit de manière à prédire pour chaque cellule :
+ - la présence ou non d'un objet (1 variable),
+ - la classe de cet objet parmi 4 labels possibles : Fish, Flower, Gravel, Sugar (4 variables),
+ - les dimensions de la bounding box correspondante (4 variables).
 
-Ce modèle YOLO associe à une grille de dimension 5 x 5. 
-Le modèle est construit de manière à prédire pour chaque cellule:
-_la présence ou non d'un objet (1 variable)
-_la classe de cet objet: 4 labels sont possibles Fish, Flower, Gravel, Sugar (4 variables)
-_les dimensions de la bounding box correspondante (4 variables)
-
-Notre cible prendra donc la forme d'un tenseur de taille 25 x 9.
+Notre cible prend donc la forme d'un tenseur de taille 25 x 9.

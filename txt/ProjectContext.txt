@@ -1,4 +1,6 @@
 
-Vous trouverez dans ce StreamLit une page dédiée à l'analyse de nos données ainsi qu'une page vous permettant de reconnaître la/les forme(s) de nuages présente(s) sur l'image satellite que vous aurez chargée.
+Bienvenue sur notre application de reconnaissance de formes nuageuses.
 
-Vous souhaitant une bonne visite !
+Cette application est une interface présentant nos recherches autour du projet "Cloud Segmentation" issu de la plateforme Kaggle.
+Le but est de répondre à une problématique de météorologie (voire de climatologie), à savoir la détection et la localisation de diverses configurations nuageuses sur des images satellite.
+Quatre types de formes, recensées par les scientifiques, peuvent cohabiter sur la même image  : "Fish", "Flower", "Sugar", "Gravel".
